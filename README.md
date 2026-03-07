@@ -18,4 +18,10 @@ way to track progress or feel rewarded for their contribution.
 - **AI Model:** YOLOv8
 - **Communication:** Twilio API, SMTPlib
 - **Database:** SQLite
-- **Frontend:** HTML5, CSS3, JavaScript
+- **Frontend:** HTML5, CSS3(Bootstrap), JavaScript
+
+### To Run the Server
+python -m uvicorn main:app --reload --port 8001
+example., 
+path..../CleanIndia>> cd CleanIndia
+path..../CleanIndia/CleanIndia>> python -m uvicorn main:app --reload --port 8001
