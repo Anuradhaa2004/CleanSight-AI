@@ -1,0 +1,340 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CleanSight AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ request.url_for('static', path='css/style.css') }}">
+    <link rel="icon" type="image/png" href="{{ request.url_for('static', path='images/profile.png') }}">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+</head>
+<body data-theme="light">
+
+  <!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-light shadow-sm">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold" href="#"><i class="bi bi-eye-fill me-2"></i>CleanSight AI</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav mx-auto mb-2 mb-lg-0 nav-center">
+        <li class="nav-item"><a class="nav-link active" href="/home">Home</a></li>
+        <li class="nav-item"><a class="nav-link" href="#impact">Impact</a></li>
+        <li class="nav-item"><a class="nav-link" href="/dashboard">Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link" href="#history">History</a></li>
+      </ul>
+      <div class="d-flex align-items-center gap-2">
+        <button id="themeToggle" class="btn btn-outline-secondary theme-toggle">
+          <i id="themeToggleIcon" class="bi bi-moon"></i>
+        </button>
+        <div id="authContainer" class="d-flex align-items-center gap-2">
+          <a id="loginBtn" href="/login?mode=login" class="btn btn-login me-2">Login</a>
+          <a id="signupBtn" href="/signup" class="btn btn-signup">Sign Up <i class="bi bi-arrow-right-short ms-1"></i></a>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!--HOME-->
+<section id="home" class="home-section d-flex align-items-center">
+  <div class="hero-content container">
+    <div class="row w-100">
+      <div class="col-md-7">
+        <div class="hero-text p-4 p-md-5 rounded-4" style="background: rgba(255,255,255,0.1);">
+          <!-- <span class="badge bg-primary mb-3">Powered by Computer Vision</span> -->
+          <h1 class="display-4 fw-bold">Stop the Waste,<br><span class="text-primary">Start the Change</span></h1>
+          <p class="lead mb-4">Take the action to reduce waste, protect animals, and build a cleaner environment for everyone.</p>
+          <div class="hero-cta d-flex gap-3">
+            <a href="{{ url_for('report_form') }}" id="reportIssueBtn" class="btn btn-cta btn-lg px-5">Report Issue</a>
+            <a href="{{ url_for('citizen_desk_redirect') }}" id="citizenDeskBtn" class="btn btn-citizen btn-lg px-4 d-none">Citizen Desk</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Impact and Process sections will go here -->
+<section id="impact" class="py-5">
+  <div class="container-fluid px-0">
+    <div class="impact-hero py-5" style="background: linear-gradient(180deg, rgba(122, 224, 115, 0.6), rgba(74, 120, 195, 0.6));">
+      <div class="container">
+    <div class="row g-4 align-items-start">
+      <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-4 p-4 mb-3">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h6 class="text-primary fw-bold text-uppercase ls-wide mb-1">Impact</h6>
+              <h3 class="fw-bold mb-0">Live City Metrics</h3>
+              <p class="text-muted small mb-0">Real-time feed of reported civic issues, waste recovery and response performance.</p>
+            </div>
+            <div>
+              <button id="refreshImpact" class="btn btn-outline-secondary btn-sm">Refresh</button>
+            </div>
+          </div>
+
+          <div class="row gy-3">
+            <div class="col-md-4">
+              <div class="p-4 rounded-3 bg-impact-card text-white">
+                <div class="small text-muted">Total Reports</div>
+                <div id="totalReports" class="h1 fw-bold mt-1 impact-number">{{ total }}</div>
+                <div class="small text-muted">(since launch)</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="p-4 rounded-3 bg-impact-card text-white">
+                <div class="small text-muted">Resolved</div>
+                <div id="resolvedCount" class="h1 fw-bold mt-1 impact-number text-success">0</div>
+                <div class="small text-muted">issues</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="p-4 rounded-3 bg-impact-card text-white">
+                <div class="small text-muted">Avg. Response Time</div>
+                <div id="avgResponseTime" class="h1 fw-bold mt-1 impact-number text-warning">--</div>
+                <div class="small text-muted">minutes</div>
+              </div>
+            </div>
+          </div>
+
+          <hr class="my-3">
+          <div>
+            <h5 class="fw-bold mb-2">Recent Activity</h5>
+            <div id="recentList" class="list-group list-group-flush">
+              <div class="list-group-item text-muted">Loading recent reports...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-4 p-3">
+          <h6 class="fw-bold">Waste Management Summary</h6>
+          <p class="small text-muted">Track estimated waste managed from verified reports.</p>
+          <div class="d-flex align-items-center justify-content-between mt-3">
+            <div>
+              <div class="small text-muted">Waste Managed</div>
+              <div id="wasteManaged" class="h3 fw-bold text-success">0 kg</div>
+            </div>
+            <div style="min-width:120px;text-align:right">
+              <div class="small text-muted">Verified</div>
+              <div id="verifiedPercent" class="h4 fw-bold text-primary">0%</div>
+            </div>
+          </div>
+          <hr>
+          <div>
+            <h6 class="fw-bold">Live Insights</h6>
+            <ul id="insightsList" class="small text-muted ps-3 mt-2">
+              <li id="insight1">Waiting for data...</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+    </div>
+  </div>
+</section>
+
+<!-- Swachh Bharat Abhiyan - Modern History Section -->
+
+<section id="history" class="swachh-history-section">
+  <!-- Hero Gradient Background -->
+  <div class="swachh-hero-bg"></div>
+  <div class="swachh-bg-overlay"></div>
+  
+  <div class="container swachh-content">
+    <!-- Header Section with Animation -->
+    <div class="swachh-header text-center mb-5 aos-animate">
+      <div class="header-badge">
+        <i class="bi bi-leaf-fill"></i>
+        OUR MOVEMENT
+      </div>
+      <h1 class="swachh-title">Swachh Bharat Abhiyan</h1>
+      <h2 class="swachh-subtitle">A Movement Towards a Cleaner India</h2>
+      <div class="header-line"></div>
+    </div>
+
+    <!-- Two Column Layout: Video + Content -->
+    <div class="row align-items-center g-4 mb-5 history-main-row">
+      <!-- Left: Video Section -->
+      <div class="col-lg-6 history-video-col">
+        <div class="video-container aos-animate">
+          <div class="video-wrapper">
+            <iframe width="560" height="315" src="https://www.youtube.com/embed/CY_ejy6ifwE?si=QWDL7A6U_1x4N2X7" 
+            title="YouTube video player" frameborder="0" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+            referrerpolicy="strict-origin-when-cross-origin" 
+            loading="lazy"
+            allowfullscreen>
+          </iframe>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Content Section -->
+      <div class="col-lg-6 history-content-col">
+        <div class="swachh-content-box aos-animate">
+          <div class="content-icon">
+            <i class="bi bi-check-circle-fill"></i>
+          </div>
+
+          <h3 class="swachh-section-title">Mission Overview</h3>
+          
+          <p class="swachh-description">
+            Launched on <strong>2nd October 2014</strong> by the Government of India, Swachh Bharat Abhiyan (Clean India Mission) stands as one of the world's largest sanitation and cleanliness campaigns. This transformative initiative aims to eliminate open defecation, improve waste management, and foster hygiene awareness across India. With over <strong>500 million lives impacted</strong>, it has fundamentally transformed communities, promoting sustainability and building a cleaner, healthier future for generations to come.
+          </p>
+
+          <!-- Key Stats with Animation
+          <div class="stats-container">
+            <div class="stat-item">
+              <div class="stat-number" data-target="500">0</div>
+              <div class="stat-suffix">M+</div> -->
+              <!-- <div class="stat-label">Lives Impacted</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number" data-target="99">0</div>
+              <div class="stat-suffix">%</div> -->
+              <!-- <div class="stat-label">Open Defecation Free</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number" data-target="2014">0</div>
+              <div class="stat-label">Launch Year</div>
+            </div>
+          </div> --> 
+
+          <!-- CTA Button -->
+          <div class="swachh-cta">
+            <a href="https://en.wikipedia.org/wiki/Swachh_Bharat_Abhiyan" target="_blank" rel="noopener noreferrer" class="btn-swachh-history">
+              <i class="bi bi-book-fill me-2"></i>Read Full History on Wikipedia
+              <i class="bi bi-arrow-up-right ms-2"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Impact Timeline Section -->
+    <div class="impact-timeline-section mt-5">
+      <h2 class="timeline-title text-center mb-5 aos-animate">Journey of Transformation</h2>
+      
+      <div class="timeline">
+        <div class="timeline-item aos-animate">
+          <div class="timeline-marker">
+            <div class="timeline-dot"></div>
+          </div>
+          <div class="timeline-content">
+            <h4 class="timeline-year">2014</h4>
+            <p class="timeline-text">Launch of Swachh Bharat Abhiyan with ambitious goals to transform India's sanitation landscape.</p>
+          </div>
+        </div>
+
+        <div class="timeline-item aos-animate">
+          <div class="timeline-marker">
+            <div class="timeline-dot"></div>
+          </div>
+          <div class="timeline-content">
+            <h4 class="timeline-year">2017</h4>
+            <p class="timeline-text">Declaration of India as Open Defecation Free nation, marking a major milestone in public health.</p>
+          </div>
+        </div>
+
+        <div class="timeline-item aos-animate">
+          <div class="timeline-marker">
+            <div class="timeline-dot"></div>
+          </div>
+          <div class="timeline-content">
+            <h4 class="timeline-year">2019</h4>
+            <p class="timeline-text">Swachh Bharat 2.0 launched focusing on waste management and sustainable environmental practices.</p>
+          </div>
+        </div>
+
+        <div class="timeline-item aos-animate">
+          <div class="timeline-marker">
+            <div class="timeline-dot"></div>
+          </div>
+          <div class="timeline-content">
+            <h4 class="timeline-year">2024</h4>
+            <p class="timeline-text">Continued efforts toward a fully clean and sustainable India with community participation.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Final CTA Section -->
+    <div class="final-cta-section text-center aos-animate mt-5">
+      <h3 class="cta-title">Join the Clean India Revolution</h3>
+      <p class="cta-subtitle">Be a part of this transformative movement and contribute to building a cleaner, healthier India</p>
+      <a href="{{ url_for('report_form') }}" id="finalCtaBtn" class="btn-final-cta">
+        <i class="bi bi-lightning-charge-fill me-2"></i>Start Contributing Today
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="cs-footer" id="siteFooter">
+  <div class="container cs-footer-inner">
+    <div class="row g-4">
+      <div class="col-lg-5 col-md-12">
+        <div class="cs-footer-col">
+          <h3 class="cs-footer-brand">CleanSight AI</h3>
+          <p class="cs-footer-copy">
+            AI-powered civic action for cleaner streets and faster city response.
+            Report issues, track impact, and build healthier communities together.
+          </p>
+          <div class="cs-social-links" aria-label="Social media links">
+            <a href="https://www.instagram.com" target="_blank" rel="noopener noreferrer" class="cs-social-link cs-social-instagram" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+            <a href="https://www.linkedin.com/in/anuradha-gupta-66732632b/" target="_blank" rel="noopener noreferrer" class="cs-social-link cs-social-linkedin" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+            <a href="https://www.github.com/Anuradhaa2004" target="_blank" rel="noopener noreferrer" class="cs-social-link cs-social-github" aria-label="GitHub"><i class="bi bi-github"></i></a>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-3 col-md-6">
+        <div class="cs-footer-col">
+          <h4 class="cs-footer-heading">QUICK LINKS</h4>
+          <ul class="cs-footer-links">
+            <li><a href="/home">Home</a></li>
+            <li><a href="{{ url_for('report_form') }}">Report</a></li>
+            <li><a href="#impact">Impact</a></li>
+            <li><a href="#history">History</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-6">
+        <div class="cs-footer-col">
+          <h4 class="cs-footer-heading">CONTACT US</h4>
+          <ul class="cs-footer-contact">
+            <li><i class="bi bi-envelope"></i><span>anuradhagupta4752@gmail.com</span></li>
+            <li><i class="bi bi-telephone"></i><span>+91 98765 43210</span></li>
+            <li><i class="bi bi-geo-alt"></i><span>Satna, Madhya Pradesh, India</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="cs-footer-bottom">
+      <p class="mb-0">© <span id="footerYear">2026</span> CleanSight AI</p>
+      <p class="mb-0">
+        <a href="#">Privacy Policy</a>
+        <span class="cs-divider">|</span>
+        <a href="#">Terms</a>
+      </p>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ request.url_for('static', path='js/auth.js') }}" defer></script>
+<script src="{{ request.url_for('static', path='js/home.js') }}" defer></script>
+</body>
+</html>
+
+
+
