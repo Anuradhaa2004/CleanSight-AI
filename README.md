@@ -4,7 +4,7 @@
 CleanSight AI is a modern solution designed to enhance urban cleanliness using Artificial Intelligence. It detects waste, categorizes it using Computer Vision, and automates reporting to municipal authorities.
 
 ## ✨ Features
-* 🔍 **AI Detection:** Uses YOLOv8 to identify and categorize different types of waste.
+* 🔍 **AI Detection:** Uses llama-3.2-11b-vision-preview (Groq Vision model) to identify and categorize different types of waste.
 * 📱 **Seamless Reporting:** Multi-step reporting process for citizens to log cleanliness issues.
 * ✉️ **Instant Notifications:** Integrated with **Twilio API** for automated SMS alerts to authorities.
 * 📊 **Real-time Dashboard:** A professional, glassmorphism-themed UI to track cleanup progress.
@@ -13,7 +13,7 @@ CleanSight AI is a modern solution designed to enhance urban cleanliness using A
 ## 🛠️ Tech Stack
 - **Frontend:** React.js, Tailwind CSS, Framer Motion
 - **Backend:** Node.js, Express
-- **AI/ML:** YOLOv8, Python
+- **AI/ML:** llama-3.2-11b-vision-preview
 - **Communication:** Twilio REST API
 
 ## 🚀 Getting Started
