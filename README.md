@@ -28,25 +28,19 @@ CleanSight AI is a modern solution designed to enhance urban cleanliness using A
    ```bash
    git clone [https://github.com/Anuradhaa2004/CleanSight-AI.git](https://github.com/Anuradhaa2004/CleanSight-AI.git)
    cd CleanSight-AI
-2.Backend Setup:
-   backend folder mein jayein:
+2. Backend Setup
    ```bash
-   cd backend
-  *Dependencies install karein:
-  ```bash
+  cd backend
   npm install
-  *Ek .env file banayein aur usme apni API keys (Twilio, Groq, etc.) dalein:
- PORT=5000
- GROQ_API_KEY=your_key_here
- TWILIO_SID=your_sid
-3.Frontend Setup:
-  Root folder se frontend folder mein jayein:
-  ```bash
-  cd ../frontend
- *Dependencies install karein:
-  ```bash
-  npm install
-4.Project Run karein:
-Dono folders mein alag-alag terminal par ye command chalayein:
-```ubash
+3.Frontend Setup
+   ```bash
+ cd ../frontend
+npm install
+4. Run the Project
+ ```bash
+cd backend
+npm run dev
+For Frontend:
+ ```bash
+cd frontend
 npm run dev
