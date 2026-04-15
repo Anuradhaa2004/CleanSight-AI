@@ -15,11 +15,12 @@ function App() {
   const location = useLocation();
 
   const isDashboard = ['/citizen', '/authority', '/report', '/login', '/signup'].includes(location.pathname);
+  const shouldLockHeight = ['/citizen', '/authority'].includes(location.pathname);
 
   return (
-    <div className="page" style={{ height: '100vh', overflow: 'hidden' }}>
+    <div className="page" style={shouldLockHeight ? { height: '100vh', overflow: 'hidden' } : { minHeight: '100vh' }}>
       {!isDashboard && <Navbar />}
-      <main className={isDashboard ? "" : "main-content"} style={{ padding: 0, margin: 0, flex: 1, height: '100%' }}>
+      <main className={isDashboard ? "" : "main-content"} style={shouldLockHeight ? { padding: 0, margin: 0, flex: 1, height: '100%' } : { padding: 0, margin: 0, flex: 1 }}>
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />

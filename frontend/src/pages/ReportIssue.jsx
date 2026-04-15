@@ -35,40 +35,81 @@ const ReportIssue = () => {
   const [detectingLocation, setDetectingLocation] = useState(false);
   const [locationMessage, setLocationMessage] = useState('');
   const [permissionDenied, setPermissionDenied] = useState(false);
+  const [, setLocationAccuracy] = useState(null);
 
-  // Auto-detect location on page load
+  // Auto-fill from localStorage and auto-detect location on page load
   useEffect(() => {
-    setFormData(prev => ({ ...prev, location: 'Loading location...' }));
+    const storedEmail = localStorage.getItem('userEmail') || '';
+    const storedName = localStorage.getItem('userName') || '';
+    const storedMobile = localStorage.getItem('userMobile') || '';
+    
+    setFormData(prev => ({ 
+      ...prev, 
+      email: storedEmail, 
+      fullName: storedName,
+      mobile: storedMobile,
+      location: 'Loading location...' 
+    }));
+    
     handleAutoDetectLocation();
   }, []);
 
+  const reverseGeocodeNominatim = async (lat, lng) => {
+    const res = await axios.get('https://nominatim.openstreetmap.org/reverse', {
+      params: {
+        lat,
+        lon: lng,
+        format: 'json',
+        addressdetails: 1,
+        // City-level zoom reduces "wrong street" noise when GPS accuracy is low
+        zoom: 14
+      },
+      headers: {
+        'Accept-Language': 'en'
+      }
+    });
+
+    const addr = res.data?.address || {};
+    const cityPart = addr.city || addr.town || addr.village || addr.county || '';
+    const regionPart = addr.state || addr.state_district || '';
+    const countryPart = addr.country || '';
+
+    const parts = [cityPart, regionPart, countryPart].filter(Boolean);
+    return parts.join(', ') || res.data?.display_name || '';
+  };
+
+  const reverseGeocodeBigDataCloud = async (lat, lng) => {
+    const res = await axios.get('https://api.bigdatacloud.net/data/reverse-geocode-client', {
+      params: {
+        latitude: lat,
+        longitude: lng,
+        localityLanguage: 'en'
+      }
+    });
+
+    const data = res.data || {};
+    const cityPart = data.city || data.locality || data.principalSubdivision || '';
+    const regionPart = data.principalSubdivision || '';
+    const countryPart = data.countryName || '';
+
+    const parts = [cityPart, regionPart, countryPart].filter(Boolean);
+    return parts.join(', ');
+  };
+
   const fetchAreaByCoordinates = async (lat, lng) => {
     try {
-      const res = await axios.get('https://nominatim.openstreetmap.org/reverse', {
-        params: {
-          lat,
-          lon: lng,
-          format: 'json',
-          addressdetails: 1,
-          zoom: 18
-        },
-        headers: {
-          'Accept-Language': 'en'
-        }
-      });
- 
-      const addr = res.data?.address || {};
-      const components = [];
-      if (addr.residential) components.push(addr.residential);
-      else if (addr.neighbourhood) components.push(addr.neighbourhood);
-      else if (addr.suburb) components.push(addr.suburb);
-      
-      if (addr.road) components.push(addr.road);
-      
-      const cityPart = addr.city || addr.town || addr.village || '';
-      if (cityPart) components.push(cityPart);
-      
-      return components.join(', ') || res.data?.display_name || '';
+      const results = await Promise.allSettled([
+        reverseGeocodeNominatim(lat, lng),
+        reverseGeocodeBigDataCloud(lat, lng)
+      ]);
+
+      const nominatim = results[0].status === 'fulfilled' ? String(results[0].value || '').trim() : '';
+      const bdc = results[1].status === 'fulfilled' ? String(results[1].value || '').trim() : '';
+
+      // Prefer the result that looks like a clean "City, Region, Country" string
+      if (bdc && bdc.split(',').length >= 2) return bdc;
+      if (nominatim) return nominatim;
+      return bdc || '';
     } catch (error) {
       console.error('Reverse geocoding failed:', error);
       return '';
@@ -89,11 +130,19 @@ const ReportIssue = () => {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
+        const accuracy = Number(position.coords.accuracy);
+        setLocationAccuracy(Number.isFinite(accuracy) ? accuracy : null);
         setCoords({ lat: latitude, lng: longitude });
         const detectedArea = await fetchAreaByCoordinates(latitude, longitude);
         if (detectedArea) {
           setFormData(prev => ({ ...prev, location: detectedArea }));
-          setLocationMessage(`✓ Detected: ${detectedArea}`);
+          if (Number.isFinite(accuracy) && accuracy >= 2000) {
+            setLocationMessage(`✓ Detected (approx. +/-${Math.round(accuracy)}m): ${detectedArea}. If this looks wrong, turn on GPS/high accuracy and tap Retry.`);
+          } else if (Number.isFinite(accuracy) && accuracy >= 200) {
+            setLocationMessage(`✓ Detected (+/-${Math.round(accuracy)}m): ${detectedArea}`);
+          } else {
+            setLocationMessage(`✓ Detected: ${detectedArea}`);
+          }
         } else {
           setLocationMessage('Location detected but could not resolve the city. Please enter manually.');
           setFormData(prev => ({ ...prev, location: '' }));
@@ -120,7 +169,8 @@ const ReportIssue = () => {
         setFormData(prev => ({ ...prev, location: '' }));
         setDetectingLocation(false);
       },
-      { timeout: 15000, maximumAge: 60000, enableHighAccuracy: true }
+      // Force fresh location to reduce "stale / wrong city" issues
+      { timeout: 20000, maximumAge: 0, enableHighAccuracy: true }
     );
   };
 
@@ -178,16 +228,17 @@ const ReportIssue = () => {
     submitData.append('image', file);
     submitData.append('location', formData.location);
     submitData.append('description', formData.description);
+    submitData.append('aiCategory', aiCategory); // Send already analyzed category
     
     if (coords) {
       submitData.append('lat', coords.lat);
       submitData.append('lon', coords.lng);
     }
     
-    // User info from localStorage
-    const userEmail = localStorage.getItem('userEmail') || formData.email;
+    // User info - prioritize form data which is auto-filled from localStorage
+    const userEmail = formData.email || localStorage.getItem('userEmail');
     const userRole = localStorage.getItem('userRole') || 'citizen';
-    const userName = localStorage.getItem('userName') || formData.fullName;
+    const userName = formData.fullName || localStorage.getItem('userName');
     const userId = "simulated_id_123"; // In a real app, this would be from the user object in context or localStorage
     
     submitData.append('userEmail', userEmail);
@@ -297,99 +348,184 @@ const ReportIssue = () => {
           {result ? (
             <motion.div 
               key="success"
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
+              initial={{ scale: 0.9, opacity: 0, y: 30 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: -30 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               style={{ 
-                backgroundColor: 'white', 
-                borderRadius: '24px', 
-                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.08)', 
+                backgroundColor: 'rgba(255, 255, 255, 0.9)', 
+                backdropFilter: 'blur(20px)',
+                borderRadius: '32px', 
+                boxShadow: '0 40px 80px -20px rgba(0,0,0,0.1), 0 0 0 1px rgba(255,255,255,0.5) inset', 
                 overflow: 'hidden',
-                border: '1px solid #f1f5f9',
                 margin: '0.5rem auto 0 auto',
-                maxWidth: '520px'
+                maxWidth: '540px'
               }}
             >
-              {/* Success Header */}
-              <div style={{ backgroundColor: '#f0f9ff', padding: '3rem 2rem', textAlign: 'center', borderBottom: '1px dashed #cbd5e1' }}>
+              {/* Success Header Area */}
+              <div style={{ padding: '3.5rem 2.5rem 2.5rem', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+                {/* Background decorative blob */}
                 <motion.div 
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: 'spring', damping: 12, delay: 0.2 }}
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 0.1 }}
+                  transition={{ duration: 1, ease: 'easeOut' }}
+                  style={{
+                    position: 'absolute',
+                    top: '-50%',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: '300px',
+                    height: '300px',
+                    background: 'radial-gradient(circle, #10b981 0%, transparent 70%)',
+                    zIndex: 0,
+                    pointerEvents: 'none'
+                  }}
+                />
+
+                <motion.div 
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: 'spring', damping: 15, stiffness: 150, delay: 0.1 }}
                   style={{ 
                     display: 'inline-flex', 
-                    padding: '1.25rem', 
-                    backgroundColor: 'white', 
+                    padding: '1.5rem', 
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
                     borderRadius: '50%', 
-                    marginBottom: '1.5rem', 
-                    color: '#10b981',
-                    boxShadow: '0 10px 20px rgba(16, 185, 129, 0.15)'
+                    marginBottom: '2rem', 
+                    color: 'white',
+                    boxShadow: '0 20px 40px -10px rgba(16, 185, 129, 0.5)',
+                    position: 'relative',
+                    zIndex: 1
                   }}
                 >
-                  <CheckCircle2 size={40} />
+                  <CheckCircle2 size={48} strokeWidth={2.5} />
                 </motion.div>
-                <h2 style={{ fontSize: '2rem', fontWeight: '800', color: '#0f172a', marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>Submission Confirmed</h2>
-                <p style={{ color: '#64748b', fontSize: '1rem', fontWeight: '500' }}>
-                  Tracking ID: <span style={{ color: '#0f172a', fontWeight: '700' }}>{result.trackingId || result._id}</span>
-                </p>
+                
+                <motion.h2 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  style={{ fontSize: '2.25rem', fontWeight: '800', color: '#0f172a', marginBottom: '0.75rem', letterSpacing: '-0.03em', position: 'relative', zIndex: 1 }}
+                >
+                  Submission Confirmed
+                </motion.h2>
+                
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  style={{ 
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    background: '#f1f5f9',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '999px',
+                    color: '#64748b', 
+                    fontSize: '0.95rem', 
+                    fontWeight: '600',
+                    position: 'relative', 
+                    zIndex: 1
+                  }}
+                >
+                  Tracking ID: <span style={{ color: '#0f172a', fontWeight: '800', letterSpacing: '0.05em' }}>{result.trackingId || result._id}</span>
+                </motion.div>
               </div>
 
-              {/* Success Details (MNC Receipt Style) */}
-              <div style={{ padding: '2.5rem 2.5rem' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2.5rem' }}>
-                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
-                      <div style={{ backgroundColor: '#f8fafc', padding: '0.6rem', borderRadius: '10px', color: '#1E75FF' }}>
-                        <ShieldAlert size={18} />
+              {/* Success Details / Receipt */}
+              <div style={{ padding: '0 2.5rem 3rem' }}>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: '1rem', 
+                    marginBottom: '2.5rem',
+                    background: '#ffffff',
+                    padding: '1.5rem',
+                    borderRadius: '24px',
+                    boxShadow: '0 10px 30px -10px rgba(0,0,0,0.05)',
+                    border: '1px solid #f1f5f9'
+                  }}
+                >
+                   <motion.div 
+                     initial={{ x: -20, opacity: 0 }}
+                     animate={{ x: 0, opacity: 1 }}
+                     transition={{ delay: 0.6 }}
+                     style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '0.75rem' }}
+                   >
+                      <div style={{ backgroundColor: '#eff6ff', padding: '0.75rem', borderRadius: '14px', color: '#3b82f6' }}>
+                        <ShieldAlert size={22} strokeWidth={2.5} />
                       </div>
-                      <div>
-                        <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>AI Classification</p>
-                        <p style={{ fontSize: '1.05rem', fontWeight: '600', color: '#0f172a' }}>{result.wasteCategory || 'Analyzing Waste Content'}</p>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: '0.75rem', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.3rem' }}>AI Validation</p>
+                        <p style={{ fontSize: '1.1rem', fontWeight: '700', color: '#0f172a' }}>{result.wasteCategory || 'Analyzing Waste'}</p>
                       </div>
-                   </div>
+                   </motion.div>
+                   
+                   <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, #e2e8f0, transparent)' }}></div>
 
-                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
-                      <div style={{ backgroundColor: '#f8fafc', padding: '0.6rem', borderRadius: '10px', color: '#f59e0b' }}>
-                        <Clock size={18} />
+                   <motion.div 
+                     initial={{ x: -20, opacity: 0 }}
+                     animate={{ x: 0, opacity: 1 }}
+                     transition={{ delay: 0.7 }}
+                     style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '0.75rem' }}
+                   >
+                      <div style={{ backgroundColor: '#fffbeb', padding: '0.75rem', borderRadius: '14px', color: '#d97706' }}>
+                        <Clock size={22} strokeWidth={2.5} />
                       </div>
-                      <div>
-                        <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>Current Status</p>
-                        <p style={{ fontSize: '1.05rem', fontWeight: '600', color: '#0f172a' }}>{result.status || 'Received'}</p>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: '0.75rem', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.3rem' }}>Current Status</p>
+                        <p style={{ fontSize: '1.1rem', fontWeight: '700', color: '#0f172a' }}>{result.status || 'Received'}</p>
                       </div>
-                   </div>
+                   </motion.div>
+                   
+                   <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, #e2e8f0, transparent)' }}></div>
 
-                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
-                      <div style={{ backgroundColor: '#f8fafc', padding: '0.6rem', borderRadius: '10px', color: '#10b981' }}>
-                        <ExternalLink size={18} />
+                   <motion.div 
+                     initial={{ x: -20, opacity: 0 }}
+                     animate={{ x: 0, opacity: 1 }}
+                     transition={{ delay: 0.8 }}
+                     style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '0.75rem' }}
+                   >
+                      <div style={{ backgroundColor: '#ecfdf5', padding: '0.75rem', borderRadius: '14px', color: '#10b981' }}>
+                        <ExternalLink size={22} strokeWidth={2.5} />
                       </div>
-                      <div>
-                        <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>Next Step</p>
-                        <p style={{ fontSize: '1.05rem', fontWeight: '600', color: '#0f172a' }}>Verification by Local Authority</p>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: '0.75rem', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.3rem' }}>Next Step</p>
+                        <p style={{ fontSize: '1.1rem', fontWeight: '700', color: '#0f172a' }}>Verification by Authority</p>
                       </div>
-                   </div>
-                </div>
+                   </motion.div>
+                </motion.div>
 
                 <motion.button 
-                  whileHover={{ scale: 1.02, backgroundColor: '#000' }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.9 }}
+                  whileHover={{ scale: 1.02, backgroundColor: '#000', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.3)' }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => navigate(`/citizen?track=${encodeURIComponent(result.trackingId || result._id)}`)}
                   style={{ 
-                    padding: '1.1rem', 
-                    backgroundColor: '#0f172a', 
+                    padding: '1.25rem', 
+                    background: 'linear-gradient(135deg, #0f172a, #1e293b)', 
                     color: 'white', 
-                    borderRadius: '16px', 
-                    fontWeight: '700', 
+                    borderRadius: '20px', 
+                    fontWeight: '800', 
                     border: 'none', 
                     width: '100%', 
                     cursor: 'pointer', 
-                    fontSize: '1rem',
-                    boxShadow: '0 10px 20px -5px rgba(15, 23, 42, 0.3)',
+                    fontSize: '1.05rem',
+                    boxShadow: '0 15px 30px -5px rgba(15, 23, 42, 0.25)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '0.5rem'
+                    gap: '0.75rem',
+                    transition: 'box-shadow 0.3s ease'
                   }}
                 >
-                  Return to Dashboard <ChevronRight size={18} />
+                  Return to Dashboard <ChevronRight size={20} strokeWidth={2.5} />
                 </motion.button>
               </div>
             </motion.div>
@@ -600,19 +736,23 @@ const ReportIssue = () => {
                             <p style={{ fontSize: '0.85rem', color: permissionDenied ? '#ef4444' : '#64748b', marginTop: '0.25rem', flex: '1 1 auto', fontStyle: 'italic' }}>
                               {locationMessage || 'Your GPS coordinates are securely captured for precise reporting.'}
                             </p>
-                            {permissionDenied && (
-                              <button
-                                type="button"
-                                onClick={handleAutoDetectLocation}
-                                style={{
-                                  fontSize: '0.75rem', fontWeight: '800', color: '#3b82f6', 
-                                  backgroundColor: 'transparent', border: 'none', cursor: 'pointer',
-                                  textDecoration: 'underline'
-                                }}
-                              >
-                                Retry Detection
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              onClick={handleAutoDetectLocation}
+                              disabled={detectingLocation}
+                              style={{
+                                fontSize: '0.75rem',
+                                fontWeight: '800',
+                                color: detectingLocation ? '#94a3b8' : '#3b82f6',
+                                backgroundColor: 'transparent',
+                                border: 'none',
+                                cursor: detectingLocation ? 'not-allowed' : 'pointer',
+                                textDecoration: 'underline',
+                                opacity: detectingLocation ? 0.6 : 1
+                              }}
+                            >
+                              {coords ? 'Re-detect' : 'Retry Detection'}
+                            </button>
                           </div>
                         </div>
                       </div>

@@ -9,7 +9,8 @@ const {
   getTickets,
   getTicketById,
   getTicketByTrackingId,
-  updateTicketStatus
+  updateTicketStatus,
+  confirmTicketResolution
 } = require('../controllers/reportController');
 
 // Multer storage setup
@@ -33,5 +34,6 @@ router.get('/tickets', getTickets);
 router.get('/ticket/track/:trackingId', getTicketByTrackingId);
 router.get('/ticket/:ticketId', getTicketById);
 router.patch('/ticket/:ticketId/status', updateTicketStatus);
+router.patch('/ticket/:ticketId/confirm-resolution', confirmTicketResolution);
 
 module.exports = router;

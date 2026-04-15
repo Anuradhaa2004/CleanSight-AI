@@ -77,11 +77,20 @@ const ticketSchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ['Open', 'In Progress', 'Resolved', 'Rejected'],
+    enum: ['Open', 'In Progress', 'Verification Pending', 'Resolved', 'Rejected'],
     default: 'Open'
+  },
+
+  resolvedAt: {
+    type: Date,
+    index: true
   }
 
 }, { timestamps: true });
+
+// TTL Index: Deletes document 15 days after resolvedAt is set
+ticketSchema.index({ resolvedAt: 1 }, { expireAfterSeconds: 15 * 24 * 60 * 60 });
+
 
 ticketSchema.pre('validate', function () {
   if (!this.trackingId) {

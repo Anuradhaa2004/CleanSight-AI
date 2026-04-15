@@ -17,3 +17,6 @@ venv/
 *.log
 database.sqlite
 
+# Uploads
+uploads/
+

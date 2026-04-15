@@ -47,12 +47,19 @@ button {
   transition: all 0.2s ease-in-out;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-weight: 600;
   line-height: 1.2;
 }
 
-input, textarea, select {
+input,
+textarea,
+select {
   font-family: inherit;
 }
 
@@ -135,8 +142,15 @@ input, textarea, select {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-fade-in {
@@ -193,6 +207,7 @@ input, textarea, select {
   .d-none-mobile {
     display: none !important;
   }
+
   .d-flex-mobile {
     display: flex !important;
   }
@@ -244,6 +259,7 @@ input, textarea, select {
   transition: transform 0.3s ease;
   display: inline-flex;
 }
+
 .animated-link:hover {
   transform: scale(1.05);
 }

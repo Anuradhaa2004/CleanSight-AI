@@ -55,6 +55,7 @@ const categoryConfig = {
 const statusConfig = {
   'Open': { color: '#facc15', bg: 'rgba(250,204,21,0.12)', border: 'rgba(250,204,21,0.3)', label: 'Open', icon: AlertTriangle },
   'In Progress': { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.3)', label: 'In Progress', icon: Activity },
+  'Verification Pending': { color: '#a855f7', bg: 'rgba(168,85,247,0.12)', border: 'rgba(168,85,247,0.3)', label: 'Verify Resolution', icon: Clock },
   'Resolved': { color: '#22c55e', bg: 'rgba(34,197,94,0.12)', border: 'rgba(34,197,94,0.3)', label: 'Resolved', icon: CheckCircle2 },
   'Rejected': { color: '#ef4444', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.3)', label: 'Rejected', icon: X },
 };
@@ -140,6 +141,20 @@ const CitizenDashboard = () => {
     navHover: 'rgba(0,0,0,0.04)',
   };
 
+  const handleConfirmResolution = async (ticketId, confirmed) => {
+    setLoading(true);
+    try {
+      await axios.patch(`${API_BASE}/api/report/ticket/${ticketId}/confirm-resolution`, { confirmed });
+      await fetchTickets();
+      if (selectedTicket?._id === ticketId) setSelectedTicket(null);
+    } catch (err) {
+      console.error('Error confirming resolution:', err);
+      alert('Failed to update status. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   /* clock tick */
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 60000);
@@ -154,7 +169,21 @@ const CitizenDashboard = () => {
       const { data } = await axios.get(
         `${API_BASE}/api/report/tickets?email=${encodeURIComponent(userEmail)}`
       );
-      setTickets(Array.isArray(data) ? data : []);
+      if (Array.isArray(data)) {
+        const fifteenDaysAgo = new Date();
+        fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+        
+        // Hide tickets resolved/rejected more than 15 days ago
+        const displayTickets = data.filter(t => {
+          if (t.resolvedAt) {
+            return new Date(t.resolvedAt) > fifteenDaysAgo;
+          }
+          return true;
+        });
+        setTickets(displayTickets);
+      } else {
+        setTickets([]);
+      }
     } catch (err) {
       console.error(err);
       setError('Could not load your reports. Make sure the backend is running.');
@@ -247,7 +276,7 @@ const CitizenDashboard = () => {
     total: tickets.length,
     open: tickets.filter(t => t.status === 'Open').length,
     inProgress: tickets.filter(t => t.status === 'In Progress').length,
-    resolved: tickets.filter(t => t.status === 'Resolved').length,
+    resolved: tickets.filter(t => t.status === 'Resolved' || t.status === 'Verification Pending').length,
   };
 
   const filtered = tickets.filter(t => {
@@ -618,6 +647,34 @@ const CitizenDashboard = () => {
           </div>
         </header>
 
+        {/* Verification Banner */}
+        {tickets.some(t => t.status === 'Verification Pending') && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            style={{ 
+              background: 'linear-gradient(90deg, #a855f7 0%, #7c3aed 100%)',
+              color: 'white',
+              padding: '10px 32px',
+              fontSize: 13,
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+              zIndex: 10
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <AlertCircle size={16} />
+              <span>Action Required: Some of your reports have been addressed. Please verify them to close the cases.</span>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.2)', padding: '4px 12px', borderRadius: 20, fontSize: 11 }}>
+              {tickets.filter(t => t.status === 'Verification Pending').length} Pending Verifications
+            </div>
+          </motion.div>
+        )}
+
         <div className="dashboard-content">
           <AnimatePresence mode="wait">
 
@@ -739,6 +796,7 @@ const CitizenDashboard = () => {
                   loading={loading}
                   error={error}
                   onView={setSelectedTicket}
+                  onAction={handleConfirmResolution}
                   compact
                   title="Recent Activity"
                 />
@@ -807,6 +865,7 @@ const CitizenDashboard = () => {
                   loading={loading}
                   error={error}
                   onView={setSelectedTicket}
+                  onAction={handleConfirmResolution}
                   title={`${filtered.length} Report${filtered.length !== 1 ? 's' : ''}`}
                 />
               </motion.div>
@@ -821,7 +880,7 @@ const CitizenDashboard = () => {
                 exit={{ opacity: 0, y: -16 }}
                 transition={{ duration: 0.35 }}
               >
-                <TimelineView tickets={tickets} loading={loading} onView={setSelectedTicket} />
+                <TimelineView tickets={tickets} loading={loading} onView={setSelectedTicket} onAction={handleConfirmResolution} />
               </motion.div>
             )}
 
@@ -835,6 +894,8 @@ const CitizenDashboard = () => {
           <TicketDetailModal
             ticket={selectedTicket}
             onClose={() => setSelectedTicket(null)}
+            onRefresh={fetchTickets}
+            onAction={handleConfirmResolution}
           />
         )}
       </AnimatePresence>
@@ -1049,7 +1110,7 @@ const CategoryBreakdown = ({ tickets, loading }) => {
 };
 
 /* Reports Table */
-const ReportsTable = ({ tickets, loading, error, onView, compact, title }) => {
+const ReportsTable = ({ tickets, loading, error, onView, onAction, compact, title }) => {
   if (loading) return (
     <div style={{
       borderRadius: 20, background: 'rgba(14,20,40,0.7)',
@@ -1161,19 +1222,52 @@ const ReportsTable = ({ tickets, loading, error, onView, compact, title }) => {
                     </span>
                   </td>
                   <td style={{ padding: '14px 16px' }}>
-                    <motion.button
-                      whileHover={{ scale: 1.08 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => onView(t)}
-                      style={{
-                        background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)',
-                        borderRadius: 8, padding: '6px 12px',
-                        color: '#818cf8', fontSize: 12, fontWeight: 600,
-                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
-                      }}
-                    >
-                      <Eye size={12} /> View
-                    </motion.button>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {t.status === 'Verification Pending' ? (
+                        <>
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => onAction(t._id, true)}
+                            style={{
+                              background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)',
+                              borderRadius: 8, padding: '6px 12px',
+                              color: '#22c55e', fontSize: 11, fontWeight: 800,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Yes, Resolved
+                          </motion.button>
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => onAction(t._id, false)}
+                            style={{
+                              background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
+                              borderRadius: 8, padding: '6px 12px',
+                              color: '#ef4444', fontSize: 11, fontWeight: 800,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Not Fixed
+                          </motion.button>
+                        </>
+                      ) : (
+                        <motion.button
+                          whileHover={{ scale: 1.08 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => onView(t)}
+                          style={{
+                            background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)',
+                            borderRadius: 8, padding: '6px 12px',
+                            color: '#818cf8', fontSize: 12, fontWeight: 600,
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
+                          }}
+                        >
+                          <Eye size={12} /> View
+                        </motion.button>
+                      )}
+                    </div>
                   </td>
                 </motion.tr>
               );
@@ -1186,7 +1280,7 @@ const ReportsTable = ({ tickets, loading, error, onView, compact, title }) => {
 };
 
 /* Timeline View */
-const TimelineView = ({ tickets, loading, onView }) => {
+const TimelineView = ({ tickets, loading, onView, onAction }) => {
   if (loading) return <PulseCard style={{ minHeight: 300, borderRadius: 20 }} />;
   if (tickets.length === 0) return (
     <EmptyCard icon={History} title="No History Yet" subtitle="Your timeline will appear here once you submit reports." />
@@ -1248,27 +1342,46 @@ const TimelineView = ({ tickets, loading, onView }) => {
                     border: '2px solid #060B18',
                   }} />
 
-                  <div style={{ fontSize: 20 }}>{cat.icon}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#c9d4e8' }}>{t.aiCategory}</div>
-                    <div style={{ fontSize: 11, color: '#4b5679', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                      <MapPin size={10} /> {t.location} &nbsp;•&nbsp; {fmtTime(t.createdAt)}
-                    </div>
-                  </div>
-                  <span style={{
-                    fontFamily: 'monospace', fontSize: 11, fontWeight: 700, color: '#818cf8',
-                    background: 'rgba(99,102,241,0.1)', padding: '3px 8px', borderRadius: 6,
-                  }}>{t.trackingId}</span>
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 4,
-                    padding: '4px 10px', borderRadius: 99,
-                    background: st.bg, color: st.color, border: `1px solid ${st.border}`,
-                    fontSize: 11, fontWeight: 700,
-                  }}>
-                    <StIcon size={11} /> {t.status}
-                  </span>
-                  <ArrowUpRight size={14} color="#374162" />
-                </motion.div>
+                   <div style={{ fontSize: 20 }}>{cat.icon}</div>
+                   <div style={{ flex: 1, minWidth: 0 }}>
+                     <div style={{ fontSize: 13, fontWeight: 700, color: '#c9d4e8' }}>{t.aiCategory}</div>
+                     <div style={{ fontSize: 11, color: '#4b5679', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                       <MapPin size={10} /> {t.location} &nbsp;•&nbsp; {fmtTime(t.createdAt)}
+                     </div>
+                   </div>
+ 
+                   {t.status === 'Verification Pending' ? (
+                     <div style={{ display: 'flex', gap: 6 }}>
+                       <button 
+                         onClick={(e) => { e.stopPropagation(); onAction(t._id, true); }}
+                         style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', border: 'none', padding: '4px 10px', borderRadius: 6, fontSize: 10, fontWeight: 800, cursor: 'pointer' }}
+                       >
+                         Yes
+                       </button>
+                       <button 
+                         onClick={(e) => { e.stopPropagation(); onAction(t._id, false); }}
+                         style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: 'none', padding: '4px 10px', borderRadius: 6, fontSize: 10, fontWeight: 800, cursor: 'pointer' }}
+                       >
+                         No
+                       </button>
+                     </div>
+                   ) : (
+                     <span style={{
+                       fontFamily: 'monospace', fontSize: 11, fontWeight: 700, color: '#818cf8',
+                       background: 'rgba(99,102,241,0.1)', padding: '3px 8px', borderRadius: 6,
+                     }}>{t.trackingId}</span>
+                   )}
+ 
+                   <span style={{
+                     display: 'inline-flex', alignItems: 'center', gap: 4,
+                     padding: '4px 10px', borderRadius: 99,
+                     background: st.bg, color: st.color, border: `1px solid ${st.border}`,
+                     fontSize: 11, fontWeight: 700,
+                   }}>
+                     <StIcon size={11} /> {t.status}
+                   </span>
+                   <ArrowUpRight size={14} color="#374162" />
+                 </motion.div>
               );
             })}
           </div>
@@ -1279,17 +1392,25 @@ const TimelineView = ({ tickets, loading, onView }) => {
 };
 
 /* Ticket Detail Modal */
-const TicketDetailModal = ({ ticket, onClose }) => {
+const TicketDetailModal = ({ ticket, onClose, onRefresh, onAction }) => {
+  const [confirming, setConfirming] = useState(false);
   const cat = getCatCfg(ticket.aiCategory);
   const st = getStatusCfg(ticket.status);
   const StIcon = st.icon;
   const imgSrc = ticket.imageUrl ? `${API_BASE}${ticket.imageUrl}` : null;
 
+  const handleAction = async (val) => {
+    setConfirming(true);
+    await onAction(ticket._id, val);
+    setConfirming(false);
+  };
+
+
   const timeline = [
     { label: 'Report Submitted', time: fmtDate(ticket.createdAt) + ' · ' + fmtTime(ticket.createdAt), done: true },
     { label: 'AI Classification', time: 'Category: ' + (ticket.aiCategory || '—'), done: ticket.aiCategory !== 'Pending Analysis' },
-    { label: 'Authority Review', time: ticket.status === 'In Progress' || ticket.status === 'Resolved' ? 'Underway' : 'Pending', done: ticket.status === 'In Progress' || ticket.status === 'Resolved' },
-    { label: 'Issue Resolved', time: ticket.status === 'Resolved' ? 'Complete' : 'Pending', done: ticket.status === 'Resolved' },
+    { label: 'Authority Review', time: ticket.status === 'In Progress' || ticket.status === 'Resolved' || ticket.status === 'Verification Pending' ? 'Underway' : 'Pending', done: ticket.status === 'In Progress' || ticket.status === 'Resolved' || ticket.status === 'Verification Pending' },
+    { label: 'Issue Resolved', time: ticket.status === 'Resolved' ? 'Complete' : ticket.status === 'Verification Pending' ? 'Verification Needed' : 'Pending', done: ticket.status === 'Resolved' },
   ];
 
   return (
@@ -1357,6 +1478,41 @@ const TicketDetailModal = ({ ticket, onClose }) => {
 
         {/* Body */}
         <div style={{ overflowY: 'auto', flex: 1 }}>
+          {ticket.status === 'Verification Pending' && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              style={{
+                background: 'rgba(168,85,247,0.1)',
+                borderBottom: '1px solid rgba(168,85,247,0.2)',
+                padding: '12px 24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#a855f7', fontSize: 13, fontWeight: 700 }}>
+                <AlertTriangle size={16} />
+                <span>Is this problem solved? Please confirm the resolution.</span>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button 
+                  onClick={() => handleAction(true)}
+                  style={{ background: '#22c55e', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 6, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
+                >
+                  Yes, Resolved
+                </button>
+                <button 
+                  onClick={() => handleAction(false)}
+                  style={{ background: '#ef4444', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 6, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
+                >
+                  Not Resolved
+                </button>
+              </div>
+            </motion.div>
+          )}
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
             {/* Left: Image */}
             <div style={{ position: 'relative', minHeight: 280, background: '#060B18', overflow: 'hidden' }}>
@@ -1448,6 +1604,54 @@ const TicketDetailModal = ({ ticket, onClose }) => {
                   ))}
                 </div>
               </div>
+
+              {/* Resolution Confirmation UI */}
+              {ticket.status === 'Verification Pending' && (
+                <div style={{
+                  marginTop: 'auto',
+                  padding: '16px',
+                  borderRadius: 16,
+                  background: 'rgba(168,85,247,0.1)',
+                  border: '1px solid rgba(168,85,247,0.2)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 12
+                }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#a855f7', textAlign: 'center' }}>
+                    Authority says this is resolved. Is it?
+                  </div>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleConfirmResolution(true)}
+                      disabled={confirming}
+                      style={{
+                        flex: 1, padding: '10px', borderRadius: 10, border: 'none',
+                        background: '#22c55e', color: 'white', fontWeight: 700, fontSize: 12,
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+                      }}
+                    >
+                      {confirming ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                      Yes, Resolved
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleConfirmResolution(false)}
+                      disabled={confirming}
+                      style={{
+                        flex: 1, padding: '10px', borderRadius: 10, border: '1px solid #ef4444',
+                        background: 'transparent', color: '#ef4444', fontWeight: 700, fontSize: 12,
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+                      }}
+                    >
+                      {confirming ? <Loader2 size={14} className="animate-spin" /> : <AlertTriangle size={14} />}
+                      Not Yet
+                    </motion.button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

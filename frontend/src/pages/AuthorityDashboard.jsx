@@ -13,6 +13,7 @@ const API_BASE = 'http://localhost:5000';
 const getStatusColor = (st) => {
   if (st === 'Open') return { color: '#facc15', bg: 'rgba(250,204,21,0.12)', border: 'rgba(250,204,21,0.3)' };
   if (st === 'In Progress') return { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.3)' };
+  if (st === 'Verification Pending') return { color: '#a855f7', bg: 'rgba(168,85,247,0.12)', border: 'rgba(168,85,247,0.3)' };
   if (st === 'Resolved') return { color: '#22c55e', bg: 'rgba(34,197,94,0.12)', border: 'rgba(34,197,94,0.3)' };
   return { color: '#ef4444', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.3)' };
 };
@@ -20,6 +21,9 @@ const getStatusColor = (st) => {
 const AuthorityDashboard = () => {
   const navigate = useNavigate();
   const [tickets, setTickets] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('board');
@@ -97,6 +101,13 @@ const AuthorityDashboard = () => {
     loadData();
   }, [userEmail, assignedArea, navigate]);
 
+  useEffect(() => {
+    if (!userEmail || !assignedArea) return;
+    fetchNotifications();
+    const t = setInterval(fetchNotifications, 15000);
+    return () => clearInterval(t);
+  }, [userEmail, assignedArea]);
+
   const fetchTickets = async () => {
     try {
       const res = await axios.get(`${API_BASE}/api/report/tickets`, {
@@ -108,6 +119,51 @@ const AuthorityDashboard = () => {
       setStatusMessage('Unable to fetch reports');
     }
     setLoading(false);
+  };
+
+  const fetchNotifications = async () => {
+    if (!userEmail) return;
+    setNotificationsLoading(true);
+    try {
+      const [listRes, countRes] = await Promise.all([
+        axios.get(`${API_BASE}/api/notifications`, {
+          params: { email: userEmail, role: 'authority', area: assignedArea, limit: 30 }
+        }),
+        axios.get(`${API_BASE}/api/notifications/unread-count`, {
+          params: { email: userEmail, role: 'authority', area: assignedArea }
+        })
+      ]);
+
+      setNotifications(Array.isArray(listRes.data?.notifications) ? listRes.data.notifications : []);
+      setUnreadCount(Number(countRes.data?.count) || 0);
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
+
+  const markNotificationRead = async (notificationId) => {
+    if (!notificationId) return;
+    try {
+      await axios.patch(`${API_BASE}/api/notifications/${notificationId}/read`, { email: userEmail });
+      setNotifications((prev) =>
+        prev.map((n) => (n._id === notificationId ? { ...n, readAt: new Date().toISOString() } : n))
+      );
+      setUnreadCount((c) => Math.max(0, c - 1));
+    } catch (error) {
+      console.error('Failed to mark notification read:', error);
+    }
+  };
+
+  const markAllNotificationsRead = async () => {
+    try {
+      await axios.patch(`${API_BASE}/api/notifications/read-all`, { email: userEmail, role: 'authority', area: assignedArea });
+      setNotifications((prev) => prev.map((n) => ({ ...n, readAt: n.readAt || new Date().toISOString() })));
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Failed to mark all notifications read:', error);
+    }
   };
 
   const handleStatusChange = async (ticketId, currentStatus, newStatus) => {
@@ -130,7 +186,7 @@ const AuthorityDashboard = () => {
     total: tickets.length,
     open: tickets.filter(t => t.status === 'Open').length,
     inProgress: tickets.filter(t => t.status === 'In Progress').length,
-    resolved: tickets.filter(t => t.status === 'Resolved').length,
+    resolved: tickets.filter(t => t.status === 'Resolved' || t.status === 'Verification Pending').length,
   };
 
   if (!assignedArea && statusMessage) {
@@ -192,6 +248,11 @@ const AuthorityDashboard = () => {
           </button>
           <button onClick={() => setActiveTab('analytics')} style={{ flex: '0 0 auto', padding: '10px 16px', borderRadius: 10, background: activeTab === 'analytics' ? 'rgba(59,130,246,0.1)' : 'transparent', color: activeTab === 'analytics' ? '#3b82f6' : T.text, border: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
             <LayoutDashboard size={16} /> Analytics
+            {unreadCount > 0 && (
+              <span style={{ marginLeft: 2, background: '#ef4444', color: '#fff', fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 999 }}>
+                {unreadCount}
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -225,7 +286,16 @@ const AuthorityDashboard = () => {
           </button>
           <button onClick={() => setActiveTab('analytics')} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px', borderRadius: 12, background: activeTab === 'analytics' ? 'rgba(59,130,246,0.1)' : 'transparent', color: activeTab === 'analytics' ? '#3b82f6' : T.text, border: 'none', cursor: 'pointer', textAlign: 'left', fontWeight: 600 }}>
             <LayoutDashboard size={20} style={{ flexShrink: 0 }} />
-            {sidebarOpen && <span>Analytics</span>}
+            {sidebarOpen && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                Analytics
+                {unreadCount > 0 && (
+                  <span style={{ background: '#ef4444', color: '#fff', fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 999 }}>
+                    {unreadCount}
+                  </span>
+                )}
+              </span>
+            )}
           </button>
         </nav>
 
@@ -298,26 +368,165 @@ const AuthorityDashboard = () => {
           </div>
 
           {/* Geographic Coverage Map Box */}
-          <div style={{
-            background: T.card, borderRadius: 20, border: `1px solid ${T.border}`,
-            overflow: 'hidden', marginBottom: 32, height: 260, position: 'relative'
-          }}>
-            {mapQuery ? (
-              <iframe
-                title="Authority Area Map"
-                width="100%" height="100%" frameBorder="0" scrolling="no" marginHeight="0" marginWidth="0"
-                src={`https://maps.google.com/maps?q=${encodeURIComponent(mapQuery.q)}&z=18&output=embed`}
-                style={{ border: 0, filter: isDark ? 'invert(100%) hue-rotate(180deg) contrast(90%)' : 'none' }}
-              />
-            ) : (
-              <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                <MapPin size={32} color={T.accent} style={{ opacity: 0.3, marginBottom: 8 }} />
-                <div style={{ fontSize: 13, color: T.text, opacity: 0.5, fontWeight: 600 }}>Click "View Map" to track incident</div>
+          {activeTab === 'board' && (
+            <div style={{
+              background: T.card, borderRadius: 20, border: `1px solid ${T.border}`,
+              overflow: 'hidden', marginBottom: 32, height: 260, position: 'relative'
+            }}>
+              {mapQuery ? (
+                <iframe
+                  title="Authority Area Map"
+                  width="100%" height="100%" frameBorder="0" scrolling="no" marginHeight="0" marginWidth="0"
+                  src={`https://maps.google.com/maps?q=${encodeURIComponent(mapQuery.q)}&z=18&output=embed`}
+                  style={{ border: 0, filter: isDark ? 'invert(100%) hue-rotate(180deg) contrast(90%)' : 'none' }}
+                />
+              ) : (
+                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                  <MapPin size={32} color={T.accent} style={{ opacity: 0.3, marginBottom: 8 }} />
+                  <div style={{ fontSize: 13, color: T.text, opacity: 0.5, fontWeight: 600 }}>Click "View Map" to track incident</div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'analytics' && (
+            <div style={{ background: T.card, borderRadius: 20, border: `1px solid ${T.border}`, overflow: 'hidden', marginBottom: 32 }}>
+              <div style={{ padding: '22px 24px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: T.textMain }}>Email Notifications</div>
+                  <div style={{ fontSize: 12, color: '#64748b', fontWeight: 700 }}>New citizen complaints for {assignedArea}</div>
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    onClick={fetchNotifications}
+                    style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${T.border}`, color: T.textMain, padding: '8px 14px', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}
+                  >
+                    {notificationsLoading ? 'Refreshing...' : 'Refresh'}
+                  </button>
+                  <button
+                    onClick={markAllNotificationsRead}
+                    disabled={unreadCount === 0}
+                    style={{
+                      background: unreadCount === 0 ? 'rgba(255,255,255,0.03)' : 'rgba(34,197,94,0.12)',
+                      border: `1px solid ${T.border}`,
+                      color: unreadCount === 0 ? '#64748b' : '#22c55e',
+                      padding: '8px 14px',
+                      borderRadius: 10,
+                      cursor: unreadCount === 0 ? 'not-allowed' : 'pointer',
+                      fontSize: 13,
+                      fontWeight: 800
+                    }}
+                  >
+                    Mark all read
+                  </button>
+                </div>
               </div>
-            )}
-          </div>
+
+              <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {notifications.length === 0 ? (
+                  <div style={{ padding: 22, borderRadius: 14, border: `1px dashed ${T.border}`, color: '#64748b', fontWeight: 700 }}>
+                    No notifications yet. New complaints will appear here automatically.
+                  </div>
+                ) : (
+                  notifications.map((n) => {
+                    const isUnread = !n.readAt;
+                    const ticket = n.ticketId;
+                    return (
+                      <div
+                        key={n._id}
+                        style={{
+                          padding: 16,
+                          borderRadius: 14,
+                          border: `1px solid ${isUnread ? 'rgba(239,68,68,0.35)' : T.border}`,
+                          background: isUnread ? 'rgba(239,68,68,0.06)' : 'rgba(255,255,255,0.02)',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          gap: 14
+                        }}
+                      >
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                            <div style={{ fontSize: 14, fontWeight: 900, color: T.textMain, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {n.title || 'New Complaint'}
+                            </div>
+                            {isUnread && (
+                              <span style={{ background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 900, padding: '2px 8px', borderRadius: 999 }}>
+                                NEW
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 13, color: T.text, fontWeight: 600, marginBottom: 10 }}>
+                            {n.message}
+                          </div>
+                          {ticket && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                              <span style={{ fontSize: 11, fontWeight: 900, padding: '4px 10px', borderRadius: 999, background: 'rgba(59,130,246,0.12)', color: '#3b82f6' }}>
+                                {ticket.trackingId}
+                              </span>
+                              <span style={{ fontSize: 11, fontWeight: 900, padding: '4px 10px', borderRadius: 999, background: 'rgba(34,197,94,0.12)', color: '#22c55e' }}>
+                                {ticket.aiCategory}
+                              </span>
+                              <span style={{ fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 999, background: 'rgba(148,163,184,0.12)', color: '#94a3b8' }}>
+                                {new Date(n.createdAt).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
+                          {ticket && (
+                            <button
+                              onClick={() => {
+                                const q = (ticket.lat && ticket.lon) ? `${ticket.lat},${ticket.lon}` : (ticket.googleMapsUrl || ticket.location || assignedArea);
+                                setMapQuery({ q, label: ticket.location || assignedArea });
+                                setActiveTab('board');
+                                setTimeout(() => {
+                                  const el = document.querySelector('.scrollable-workspace');
+                                  if (el) el.scrollTo({ top: 300, behavior: 'smooth' });
+                                }, 50);
+                              }}
+                              style={{
+                                padding: '8px 12px',
+                                borderRadius: 10,
+                                fontSize: 12,
+                                fontWeight: 800,
+                                border: `1px solid ${T.border}`,
+                                background: 'rgba(59,130,246,0.12)',
+                                color: '#3b82f6',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              View Map
+                            </button>
+                          )}
+                          <button
+                            onClick={() => markNotificationRead(n._id)}
+                            disabled={!isUnread}
+                            style={{
+                              padding: '8px 12px',
+                              borderRadius: 10,
+                              fontSize: 12,
+                              fontWeight: 800,
+                              border: `1px solid ${T.border}`,
+                              background: isUnread ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.03)',
+                              color: isUnread ? '#22c55e' : '#64748b',
+                              cursor: isUnread ? 'pointer' : 'not-allowed'
+                            }}
+                          >
+                            Mark read
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Active Incidents Board */}
+          {activeTab === 'board' && (
           <div style={{ background: T.card, borderRadius: 20, border: `1px solid ${T.border}`, overflow: 'hidden' }}>
             <div style={{ padding: '24px 28px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{ margin: 0, fontSize: 18, color: T.textMain, fontWeight: 800 }}>Active Incidents Board</h2>
@@ -419,6 +628,16 @@ const AuthorityDashboard = () => {
                                 Mark Resolved
                               </button>
                             )}
+                            {t.status === 'Verification Pending' && (
+                              <div style={{
+                                padding: '8px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                                background: 'rgba(168, 85, 247, 0.12)', color: '#a855f7',
+                                border: '1px solid rgba(168, 85, 247, 0.3)',
+                                width: '120px', textAlign: 'center'
+                              }}>
+                                Verifying... ⏳
+                              </div>
+                            )}
                             {t.status === 'Resolved' && (
                               <div style={{
                                 padding: '8px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700,
@@ -448,6 +667,7 @@ const AuthorityDashboard = () => {
               </table>
             </div>
           </div>
+          )}
 
         </div>
       </main>

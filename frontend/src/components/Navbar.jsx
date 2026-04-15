@@ -19,7 +19,7 @@ const Navbar = () => {
          setScrolled(window.scrollY > 20);
       };
       window.addEventListener('scroll', handleScroll);
-      
+
       const savedTheme = localStorage.getItem('theme');
       if (savedTheme === 'dark') {
          document.body.classList.add('dark-theme');
@@ -52,22 +52,22 @@ const Navbar = () => {
    }
 
    return (
-      <motion.nav 
+      <motion.nav
          initial={{ y: -100 }}
          animate={{ y: 0 }}
          transition={{ type: 'spring', stiffness: 100, damping: 20 }}
-         className="navbar" 
-         style={{ 
-            background: scrolled ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.5)', 
-            backdropFilter: 'blur(12px)', 
-            borderBottom: scrolled ? '1px solid rgba(226, 232, 240, 0.8)' : '1px solid transparent', 
-            height: '4.5rem', 
+         className="navbar"
+         style={{
+            background: scrolled ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.5)',
+            backdropFilter: 'blur(12px)',
+            borderBottom: scrolled ? '1px solid rgba(226, 232, 240, 0.8)' : '1px solid transparent',
+            height: '4.5rem',
             display: 'flex',
             alignItems: 'center',
-            position: 'fixed', 
-            top: 0, 
-            left: 0, 
-            right: 0, 
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
             zIndex: 100,
             transition: 'all 0.3s ease'
          }}
@@ -90,12 +90,12 @@ const Navbar = () => {
             {/* Desktop Links */}
             <div className="hidden md:flex" style={{ gap: '2.5rem', alignItems: 'center' }}>
                {['Home', 'Impact', 'History'].map((item) => (
-                  <Link 
+                  <Link
                      key={item}
-                     to={item === 'Home' ? '/' : `/${item.toLowerCase()}`} 
-                     style={{ 
-                        fontSize: '0.85rem', 
-                        fontWeight: '500', 
+                     to={item === 'Home' ? '/' : `/${item.toLowerCase()}`}
+                     style={{
+                        fontSize: '0.85rem',
+                        fontWeight: '500',
                         color: location.pathname === (item === 'Home' ? '/' : `/${item.toLowerCase()}`) ? '#1E75FF' : '#64748b',
                         textDecoration: 'none',
                         transition: 'color 0.3s ease',
@@ -105,7 +105,7 @@ const Navbar = () => {
                   >
                      {item}
                      {location.pathname === (item === 'Home' ? '/' : `/${item.toLowerCase()}`) && (
-                        <motion.div 
+                        <motion.div
                            layoutId="nav-underline"
                            transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                            style={{ position: 'absolute', bottom: '-4px', left: 0, right: 0, height: '2px', background: '#1E75FF', borderRadius: '2px' }}
@@ -117,10 +117,10 @@ const Navbar = () => {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
                {/* Theme Toggle - Visible on both */}
-               <motion.button 
+               <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={toggleTheme} 
+                  onClick={toggleTheme}
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', background: '#f1f5f9', borderRadius: '50%', width: '34px', height: '36px', border: 'none', cursor: 'pointer', transition: 'all 0.3s ease' }}
                >
                   {isDark ? <Sun size={17} color="#f59e0b" /> : <Moon size={17} />}
@@ -134,10 +134,10 @@ const Navbar = () => {
                            <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: '500' }}>Account</span>
                            <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>{userName}</span>
                         </div>
-                        <motion.button 
+                        <motion.button
                            whileHover={{ scale: 1.03, backgroundColor: '#fee2e2' }}
                            whileTap={{ scale: 0.97 }}
-                           onClick={handleLogout} 
+                           onClick={handleLogout}
                            style={{ padding: '0.45rem 0.9rem', borderRadius: '10px', fontWeight: '600', color: '#ef4444', backgroundColor: '#fff1f1', border: 'none', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', cursor: 'pointer', transition: 'all 0.3s ease' }}
                         >
                            <LogOut size={15} /> Logout
@@ -158,49 +158,49 @@ const Navbar = () => {
                </div>
 
                {/* Mobile Toggle */}
-            <div className="flex md:hidden" style={{ alignItems: 'center', gap: '0.8rem' }}>
-               <motion.button 
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => setIsOpen(!isOpen)} 
-                  style={{ 
-                     background: '#f1f5f9', 
-                     border: 'none', 
-                     padding: '0.55rem', 
-                     borderRadius: '12px', 
-                     cursor: 'pointer',
-                     display: 'flex',
-                     alignItems: 'center',
-                     justifyContent: 'center',
-                     boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-                  }}
-               >
-                  <AnimatePresence mode="wait">
-                     {isOpen ? (
-                        <motion.div
-                           key="close"
-                           initial={{ rotate: -90, opacity: 0 }}
-                           animate={{ rotate: 0, opacity: 1 }}
-                           exit={{ rotate: 90, opacity: 0 }}
-                           transition={{ duration: 0.2 }}
-                        >
-                           <X size={22} color="#0f172a" strokeWidth={2.5} />
-                        </motion.div>
-                     ) : (
-                        <motion.div
-                           key="menu"
-                           initial={{ rotate: 90, opacity: 0 }}
-                           animate={{ rotate: 0, opacity: 1 }}
-                           exit={{ rotate: -90, opacity: 0 }}
-                           transition={{ duration: 0.2 }}
-                        >
-                           <Menu size={22} color="#0f172a" strokeWidth={2.5} />
-                        </motion.div>
-                     )}
-                  </AnimatePresence>
-               </motion.button>
+               <div className="flex md:hidden" style={{ alignItems: 'center', gap: '0.8rem' }}>
+                  <motion.button
+                     whileTap={{ scale: 0.9 }}
+                     onClick={() => setIsOpen(!isOpen)}
+                     style={{
+                        background: '#f1f5f9',
+                        border: 'none',
+                        padding: '0.55rem',
+                        borderRadius: '12px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                     }}
+                  >
+                     <AnimatePresence mode="wait">
+                        {isOpen ? (
+                           <motion.div
+                              key="close"
+                              initial={{ rotate: -90, opacity: 0 }}
+                              animate={{ rotate: 0, opacity: 1 }}
+                              exit={{ rotate: 90, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                           >
+                              <X size={22} color="#0f172a" strokeWidth={2.5} />
+                           </motion.div>
+                        ) : (
+                           <motion.div
+                              key="menu"
+                              initial={{ rotate: 90, opacity: 0 }}
+                              animate={{ rotate: 0, opacity: 1 }}
+                              exit={{ rotate: -90, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                           >
+                              <Menu size={22} color="#0f172a" strokeWidth={2.5} />
+                           </motion.div>
+                        )}
+                     </AnimatePresence>
+                  </motion.button>
+               </div>
             </div>
          </div>
-      </div>
 
          {/* Mobile Menu */}
          <AnimatePresence>
@@ -223,41 +223,41 @@ const Navbar = () => {
                         zIndex: 90
                      }}
                   />
-                  
+
                   {/* Menu Content */}
-                  <motion.div 
+                  <motion.div
                      initial={{ opacity: 0, y: -20, scale: 0.95 }}
                      animate={{ opacity: 1, y: 0, scale: 1 }}
                      exit={{ opacity: 0, y: -20, scale: 0.95 }}
                      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                     style={{ 
-                        position: 'absolute', 
-                        top: '5.2rem', 
-                        left: '1.25rem', 
-                        right: '1.25rem', 
-                        background: 'rgba(255, 255, 255, 0.95)', 
+                     style={{
+                        position: 'absolute',
+                        top: '5.2rem',
+                        left: '1.25rem',
+                        right: '1.25rem',
+                        background: 'rgba(255, 255, 255, 0.95)',
                         backdropFilter: 'blur(20px)',
-                        borderRadius: '24px', 
-                        border: '1px solid rgba(241, 245, 249, 0.8)', 
-                        padding: '1.5rem', 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        gap: '1rem', 
-                        boxShadow: '0 20px 40px -15px rgba(0,0,0,0.15)', 
+                        borderRadius: '24px',
+                        border: '1px solid rgba(241, 245, 249, 0.8)',
+                        padding: '1.5rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '1rem',
+                        boxShadow: '0 20px 40px -15px rgba(0,0,0,0.15)',
                         zIndex: 100,
                         transformOrigin: 'top right'
                      }}
                   >
                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         {['Home', 'Impact', 'History'].map((item) => (
-                           <Link 
+                           <Link
                               key={item}
-                              to={item === 'Home' ? '/' : `/${item.toLowerCase()}`} 
-                              onClick={() => setIsOpen(false)} 
-                              style={{ 
-                                 fontWeight: '600', 
-                                 color: location.pathname === (item === 'Home' ? '/' : `/${item.toLowerCase()}`) ? '#1E75FF' : '#334155', 
-                                 textDecoration: 'none', 
+                              to={item === 'Home' ? '/' : `/${item.toLowerCase()}`}
+                              onClick={() => setIsOpen(false)}
+                              style={{
+                                 fontWeight: '600',
+                                 color: location.pathname === (item === 'Home' ? '/' : `/${item.toLowerCase()}`) ? '#1E75FF' : '#334155',
+                                 textDecoration: 'none',
                                  fontSize: '1.05rem',
                                  padding: '0.75rem 1rem',
                                  borderRadius: '12px',
@@ -271,7 +271,7 @@ const Navbar = () => {
                      </div>
 
                      <div style={{ height: '1px', background: '#f1f5f9', margin: '0.5rem 0' }} />
-                     
+
                      {userEmail ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0 0.5rem' }}>
@@ -280,16 +280,16 @@ const Navbar = () => {
                               </div>
                               <span style={{ fontWeight: '700', color: '#0f172a', fontSize: '1rem' }}>{userName}</span>
                            </div>
-                           <motion.button 
+                           <motion.button
                               whileTap={{ scale: 0.98 }}
-                              onClick={handleLogout} 
-                              style={{ 
-                                 background: '#fff1f1', 
-                                 border: 'none', 
-                                 color: '#ef4444', 
-                                 fontWeight: '600', 
-                                 display: 'flex', 
-                                 alignItems: 'center', 
+                              onClick={handleLogout}
+                              style={{
+                                 background: '#fff1f1',
+                                 border: 'none',
+                                 color: '#ef4444',
+                                 fontWeight: '600',
+                                 display: 'flex',
+                                 alignItems: 'center',
                                  justifyContent: 'center',
                                  gap: '0.6rem',
                                  padding: '0.8rem',
@@ -302,16 +302,16 @@ const Navbar = () => {
                         </div>
                      ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                           <Link 
-                              to="/login" 
-                              onClick={() => setIsOpen(false)} 
-                              style={{ 
-                                 textAlign: 'center', 
-                                 padding: '0.8rem', 
-                                 borderRadius: '12px', 
-                                 background: '#f8fafc', 
-                                 color: '#334155', 
-                                 fontWeight: '600', 
+                           <Link
+                              to="/login"
+                              onClick={() => setIsOpen(false)}
+                              style={{
+                                 textAlign: 'center',
+                                 padding: '0.8rem',
+                                 borderRadius: '12px',
+                                 background: '#f8fafc',
+                                 color: '#334155',
+                                 fontWeight: '600',
                                  textDecoration: 'none',
                                  fontSize: '0.95rem',
                                  border: '1px solid #f1f5f9'
@@ -319,16 +319,16 @@ const Navbar = () => {
                            >
                               Login
                            </Link>
-                           <Link 
-                              to="/signup" 
-                              onClick={() => setIsOpen(false)} 
-                              style={{ 
-                                 textAlign: 'center', 
-                                 padding: '0.8rem', 
-                                 borderRadius: '12px', 
-                                 background: '#1E75FF', 
-                                 color: 'white', 
-                                 fontWeight: '600', 
+                           <Link
+                              to="/signup"
+                              onClick={() => setIsOpen(false)}
+                              style={{
+                                 textAlign: 'center',
+                                 padding: '0.8rem',
+                                 borderRadius: '12px',
+                                 background: '#1E75FF',
+                                 color: 'white',
+                                 fontWeight: '600',
                                  textDecoration: 'none',
                                  fontSize: '0.95rem',
                                  boxShadow: '0 4px 12px rgba(30, 117, 255, 0.2)'

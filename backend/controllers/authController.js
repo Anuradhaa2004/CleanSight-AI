@@ -17,7 +17,7 @@ const requestOTP = async (req, res) => {
   try {
     let user = await User.findOne({ email });
 
-    if(user){
+    if (user && user.isVerified) {
       return res.status(400).json({ message: 'User already exists. Please log in or use forgot password.' });
     }
 
@@ -35,17 +35,20 @@ const requestOTP = async (req, res) => {
         newUserData.assignedArea = assignedArea;
       }
       user = new User(newUserData);
-    } 
-    // else {
-    //   if (password) user.password = password;
-    //   if (role) user.role = role;
-    //   if (name) user.name = name;
-    //   if (role === 'authority' && assignedArea) user.assignedArea = assignedArea;
-    // }
+    } else {
+      // Unverified user: allow re-requesting OTP and refreshing registration details
+      if (password) user.password = password;
+      if (role) user.role = role;
+      if (name) user.name = name;
+      if (role === 'authority' && assignedArea) user.assignedArea = assignedArea;
+    }
 
     const otp = generateOTP();
     console.log(`Generated OTP for ${email}: ${otp}`); // Log OTP for debugging
     console.log(`[AuthController] Saving user data for ${email}...`);
+
+    user.otp = otp;
+    user.otpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
     await user.save();
     console.log(`[AuthController] User data saved. Handing off to EmailService...`);
     
@@ -73,7 +76,9 @@ const verifyOTP = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    if (user.otp !== otp || user.otpExpiry < Date.now()) {
+    const submittedOtp = String(otp).trim();
+
+    if (!user.otp || !user.otpExpiry || user.otp !== submittedOtp || user.otpExpiry < Date.now()) {
       return res.status(400).json({ message: 'Invalid or expired OTP' });
     }
 
