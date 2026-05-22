@@ -82,8 +82,7 @@ const ticketSchema = new mongoose.Schema({
   },
 
   resolvedAt: {
-    type: Date,
-    index: true
+    type: Date
   }
 
 }, { timestamps: true });

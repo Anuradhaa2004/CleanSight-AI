@@ -1,55 +1,69 @@
-const Groq = require('groq-sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const fs = require('fs');
 
-// Initialize Groq. Fallback to GEMINI_API_KEY just in case you didn't rename the variable in .env
-const apiKey = process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY;
+const apiKey = process.env.GEMINI_API_KEY;
+const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
-const groq = apiKey ? new Groq({ apiKey }) : null;
+// Function to convert local file to a part object suitable for Gemini
+function fileToGenerativePart(path, mimeType) {
+  return {
+    inlineData: {
+      data: Buffer.from(fs.readFileSync(path)).toString("base64"),
+      mimeType
+    },
+  };
+}
 
 const categorizeWasteImage = async (imagePath, mimeType) => {
-  if (!groq) {
-      console.log("No Groq API key found. AI categorization skipped.");
+  if (!genAI) {
+      console.log("No Gemini API key found. AI categorization skipped.");
       return null;
   }
 
   try {
-    const imageData = fs.readFileSync(imagePath).toString('base64');
-    const base64Url = `data:${mimeType};base64,${imageData}`;
-    
-    const prompt = `You are an expert civic issue categorization AI. 
-Analyze the image and categorize the primary civic issue shown into EXACTLY ONE of these categories:
-1. "Dead Animal" (carcasses, animal remains)
-2. "Potholes" (broken road, severe asphalt damage, large holes)
-3. "Sewer Damage" (clogged drains, broken manholes, wastewater leaks, sewage)
-4. "General Waste" (garbage, litter dumps, loose trash, overflowing bins)
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const imagePart = fileToGenerativePart(imagePath, mimeType || "image/jpeg");
 
-IMPORTANT: You must respond in STRICT JSON format. Do not use markdown blocks. Do not add any conversational text.
+    const prompt = `
+  Classify this civic issue image into ONLY ONE category:
+
+  Dead Animal
+  Potholes
+  Sewer Damage
+  General Waste
+
+  Rules:
+  - Return JSON only
+  - No explanation
+  - Choose closest category
+
+Format:
 {
-  "category": "exact category string from the 4 options above",
-  "confidence": score from 0 to 100 representing certainty
-}`;
+"category": "Dead Animal | Potholes | Sewer Damage | General Waste",
+"confidence": number
+}
+`;
+    // const result = await model.generateContent([prompt, imagePart]);
+    const result = await model.generateContent({
+  contents: [
+    {
+      role: "user",
+      parts: [
+        { text: prompt },
+        imagePart
+      ]
+    }
+  ],
+  generationConfig: {
+    temperature: 0.1,
+    topK: 1,
+    topP: 1
+  }
+});
+    const response = await result.response;
+    const output = response.text();
 
-    const response = await groq.chat.completions.create({
-      model: "llama-3.2-11b-vision-preview",
-      temperature: 0.2, // low temperature for strict compliance
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: prompt },
-            {
-              type: "image_url",
-              image_url: {
-                url: base64Url,
-              },
-            },
-          ],
-        },
-      ],
-    });
-
-    const output = response.choices[0]?.message?.content || "";
-    console.log("Raw Groq Output:\n", output);
+    console.log("Raw Gemini Output:\n", output);
     
     let category = 'General Waste';
     let confidence = 85;
@@ -90,7 +104,7 @@ IMPORTANT: You must respond in STRICT JSON format. Do not use markdown blocks. D
     return { category, confidence: Math.round(confidence), raw: output };
 
   } catch (error) {
-    console.error('Error categorizing image with Groq API:', error);
+    console.error('Error categorizing image with Gemini API:', error);
     return { category: 'General Waste', confidence: 50, raw: 'Fallback due to API error' };
   }
 };

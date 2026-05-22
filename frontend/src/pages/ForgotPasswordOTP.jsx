@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Mail, KeyRound, ArrowRight, Loader2, ShieldCheck } from 'lucide-react';
+import { apiUrl } from '../config/api';
 
 const ForgotPasswordOTP = () => {
     const [email, setEmail] = useState('');
@@ -17,7 +18,7 @@ const ForgotPasswordOTP = () => {
         setMessage('');
 
         try {
-            const res = await axios.post('http://localhost:5000/api/auth/forgot-password', { email });
+            const res = await axios.post(apiUrl('/api/auth/forgot-password'), { email });
             setMessage(res.data.detail || 'Code sent successfully!');
             
             // Redirect to Reset page after short delay, passing email as state
@@ -25,7 +26,11 @@ const ForgotPasswordOTP = () => {
                 navigate('/reset-password', { state: { email } });
             }, 1500);
         } catch (err) {
-            setError(err.response?.data?.message || 'Something went wrong. Please try again.');
+            if (err?.message?.includes('API URL not configured')) {
+                setError(err.message);
+                return;
+            }
+            setError(err.response?.data?.message || err.response?.data?.error || 'Something went wrong. Please try again.');
         } finally {
             setLoading(false);
         }

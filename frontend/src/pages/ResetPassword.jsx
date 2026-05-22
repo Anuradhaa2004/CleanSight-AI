@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { KeyRound, Lock, Mail, ShieldCheck, Loader2, CheckCircle2 } from 'lucide-react';
+import { apiUrl } from '../config/api';
 
 const ResetPassword = () => {
   const navigate = useNavigate();
@@ -34,7 +35,7 @@ const ResetPassword = () => {
 
     setLoading(true);
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/reset-password', {
+      const res = await axios.post(apiUrl('/api/auth/reset-password'), {
         email,
         otp,
         newPassword
@@ -42,7 +43,11 @@ const ResetPassword = () => {
       setSuccess(res.data?.message || 'Password reset successful.');
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Unable to reset password. Check your code.');
+      if (err?.message?.includes('API URL not configured')) {
+        setError(err.message);
+        return;
+      }
+      setError(err.response?.data?.message || err.response?.data?.error || 'Unable to reset password. Check your code.');
     } finally {
       setLoading(false);
     }

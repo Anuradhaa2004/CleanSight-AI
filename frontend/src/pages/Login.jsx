@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Leaf, Mail, Lock, LogIn, User, ShieldAlert, Send, X } from 'lucide-react';
 import axios from 'axios';
+import { apiUrl } from '../config/api';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -17,7 +18,7 @@ const Login = () => {
     setError('');
     
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/login', { email, password, role });
+      const res = await axios.post(apiUrl('/api/auth/login'), { email, password, role });
       
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('userEmail', res.data.user.email);
@@ -31,7 +32,12 @@ const Login = () => {
         navigate('/report');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      if (err?.message?.includes('API URL not configured')) {
+        setError(err.message);
+        setLoading(false);
+        return;
+      }
+      setError(err.response?.data?.message || err.response?.data?.error || 'Login failed');
     }
     setLoading(false);
   };

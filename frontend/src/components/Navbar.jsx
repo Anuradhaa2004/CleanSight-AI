@@ -47,6 +47,29 @@ const Navbar = () => {
       navigate('/login');
    };
 
+    const handleScroll = (e, targetId) => {
+      if (location.pathname === '/') {
+         e.preventDefault();
+         if (targetId === 'top') {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+         }
+         const element = document.getElementById(targetId);
+         if (element) {
+            const offset = 80;
+            const bodyRect = document.body.getBoundingClientRect().top;
+            const elementRect = element.getBoundingClientRect().top;
+            const elementPosition = elementRect - bodyRect;
+            const offsetPosition = elementPosition - offset;
+
+            window.scrollTo({
+               top: offsetPosition,
+               behavior: 'smooth'
+            });
+         }
+      }
+   };
+
    if (['/login', '/signup', '/report', '/citizen', '/authority'].includes(location.pathname)) {
       return null;
    }
@@ -89,10 +112,11 @@ const Navbar = () => {
 
             {/* Desktop Links */}
             <div className="hidden md:flex" style={{ gap: '2.5rem', alignItems: 'center' }}>
-               {['Home', 'Impact', 'History'].map((item) => (
+               {['Home', 'Working', 'History'].map((item) => (
                   <Link
                      key={item}
-                     to={item === 'Home' ? '/' : `/${item.toLowerCase()}`}
+                     to={item === 'Home' ? '/' : item === 'Working' ? '/#how-it-works' : item === 'History' ? '/#history' : `/${item.toLowerCase()}`}
+                     onClick={item === 'Home' ? (e) => handleScroll(e, 'top') : item === 'Working' ? (e) => handleScroll(e, 'how-it-works') : item === 'History' ? (e) => handleScroll(e, 'history') : undefined}
                      style={{
                         fontSize: '0.85rem',
                         fontWeight: '500',
@@ -249,11 +273,16 @@ const Navbar = () => {
                      }}
                   >
                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        {['Home', 'Impact', 'History'].map((item) => (
+                        {['Home', 'Working', 'History'].map((item) => (
                            <Link
                               key={item}
-                              to={item === 'Home' ? '/' : `/${item.toLowerCase()}`}
-                              onClick={() => setIsOpen(false)}
+                              to={item === 'Home' ? '/' : item === 'Working' ? '/#how-it-works' : item === 'History' ? '/#history' : `/${item.toLowerCase()}`}
+                              onClick={(e) => {
+                                 setIsOpen(false);
+                                 if (item === 'Home') handleScroll(e, 'top');
+                                 if (item === 'Working') handleScroll(e, 'how-it-works');
+                                 if (item === 'History') handleScroll(e, 'history');
+                              }}
                               style={{
                                  fontWeight: '600',
                                  color: location.pathname === (item === 'Home' ? '/' : `/${item.toLowerCase()}`) ? '#1E75FF' : '#334155',

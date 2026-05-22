@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ReportIssue from './pages/ReportIssue';
 import CitizenDashboard from './pages/CitizenDashboard';
+import AdminProfile from './pages/AdminProfile';
 import AuthorityDashboard from './pages/AuthorityDashboard';
 import ResetPassword from './pages/ResetPassword';
 import ForgotPasswordOTP from './pages/ForgotPasswordOTP';
@@ -14,7 +15,7 @@ function App() {
   const userRole = localStorage.getItem('userRole');
   const location = useLocation();
 
-  const isDashboard = ['/citizen', '/authority', '/report', '/login', '/signup'].includes(location.pathname);
+  const isDashboard = ['/citizen', '/authority', '/report', '/login', '/signup', '/admin-profile', '/forgot-password', '/reset-password'].includes(location.pathname);
   const shouldLockHeight = ['/citizen', '/authority'].includes(location.pathname);
 
   return (
@@ -42,6 +43,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['authority']}>
                 <AuthorityDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin-profile"
+            element={
+              <ProtectedRoute allowedRoles={['authority']}>
+                <AdminProfile />
               </ProtectedRoute>
             }
           />

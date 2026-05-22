@@ -7,8 +7,10 @@ import noDumpingImg from '../assets/NoDumping.jpg';
 import gobarGasImg from '../assets/GobarGas.jpg';
 import smartAiImg from '../assets/SmartAi.jpg';
 import plasticReuseImg from '../assets/PlasticReuse.jpg';
-import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { motion, useInView, useSpring, useTransform, useScroll } from 'framer-motion';
+import { useState, useRef, useEffect } from 'react';
+import { Smartphone, ClipboardList, Camera, Upload, CheckCircle } from 'lucide-react';
+import Footer from '../components/Footer';
 
 
 const historyCards = [
@@ -22,10 +24,10 @@ const historyCards = [
     tall: true,
   },
   {
-   year:'2017',
+    year: '2017',
     desc: 'Dustbins soild and liquid waste',
     bgGradient: 'linear-gradient(160deg,#064e3b,#059669,#34d399)',
-   emoji: '🗑️',
+    emoji: '🗑️',
     img: schoolImg,
     tall: false,
   },
@@ -74,30 +76,6 @@ const historyCards = [
     img: plasticReuseImg,
     tall: true,
   },
-  {
-    year: '2021',
-    title: 'SBM-Urban 2.0',
-    desc: 'Garbage-free cities and grey water management',
-    bgGradient: 'linear-gradient(160deg,#1a1a2e,#4a00e0,#8e2de2)',
-    emoji: '🌿',
-    tall: false,
-  },
-  {
-    year: '2023',
-    title: 'Smart Monitoring',
-    desc: 'IoT + satellite mapping tracks cleanliness in real time',
-    bgGradient: 'linear-gradient(160deg,#0f172a,#1d4ed8,#06b6d4)',
-    emoji: '📡',
-    tall: true,
-  },
-  {
-    year: 'Today',
-    title: 'CleanSight AI',
-    desc: 'Citizens report waste via AI · closing the gap instantly',
-    bgGradient: 'linear-gradient(160deg,#1e1b4b,#4f46e5,#06b6d4)',
-    emoji: '🤖',
-    tall: false,
-  },
 ];
 
 /* ─────────────────────────────────────────────
@@ -144,10 +122,10 @@ const PortraitCard = ({ card, floatDelay }) => {
         }}
       >
         {card.img ? (
-          <img 
-            src={card.img} 
-            alt={card.title} 
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+          <img
+            src={card.img}
+            alt={card.title}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
         ) : (
           <div
@@ -255,72 +233,714 @@ const MarqueeTrack = ({ cards }) => {
 /* ─────────────────────────────────────────────
    HISTORY SECTION
 ───────────────────────────────────────────── */
-const HistorySection = () => (
-  <section
-    id="history"
-    style={{
-      width: '100%',
-      padding: '5rem 0 4rem',
-      background: 'var(--bg-color)',
-      overflow: 'hidden',
-      position: 'relative',
-      transition: 'background-color 0.3s ease',
-    }}
-  >
-    {/* Soft blobs */}
-    <div style={{ position: 'absolute', top: '-5rem', right: '-6rem', width: '28rem', height: '28rem', borderRadius: '50%', background: 'radial-gradient(circle, rgba(30,117,255,0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
-    <div style={{ position: 'absolute', bottom: '-4rem', left: '-4rem', width: '22rem', height: '22rem', borderRadius: '50%', background: 'radial-gradient(circle, rgba(6,182,212,0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
+const HistorySection = () => {
+  useEffect(() => {
+    if (window.location.hash === '#history') {
+      setTimeout(() => {
+        const element = document.getElementById('history');
+        if (element) {
+          const offset = 80;
+          const bodyRect = document.body.getBoundingClientRect().top;
+          const elementRect = element.getBoundingClientRect().top;
+          const elementPosition = elementRect - bodyRect;
+          const offsetPosition = elementPosition - offset;
+          window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+        }
+      }, 600);
+    }
+  }, []);
 
-    {/* Header */}
-    <motion.div
-      initial={{ opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.7 }}
-      style={{ textAlign: 'center', padding: '0 1.5rem', marginBottom: '2.5rem' }}
+  return (
+    <section
+      id="history"
+      style={{
+        width: '100%',
+        padding: '5rem 0 4rem',
+        background: 'var(--bg-color)',
+        overflow: 'hidden',
+        position: 'relative',
+        transition: 'background-color 0.3s ease',
+      }}
     >
-      <span
-        style={{
-          display: 'inline-block',
-          fontSize: '0.68rem',
-          fontWeight: 800,
-          letterSpacing: '0.18em',
-          textTransform: 'uppercase',
-          color: '#1E75FF',
-          background: 'rgba(30,117,255,0.08)',
-          border: '1px solid rgba(30,117,255,0.2)',
-          borderRadius: '100px',
-          padding: '0.3rem 1rem',
-          marginBottom: '1rem',
-        }}
-      >
-        Our Legacy
-      </span>
-      <h2
-        style={{
-          fontSize: 'clamp(1.75rem, 4vw, 2.8rem)',
-          fontWeight: 800,
-          color: 'var(--text-main)',
-          lineHeight: 1.2,
-          letterSpacing: '-0.02em',
-          marginBottom: '0.8rem',
-          transition: 'color 0.3s ease',
-        }}
-      >
-        The Journey of{' '}
-        <span style={{ background: 'linear-gradient(90deg,#1E75FF,#06b6d4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-          Swachh Bharat
-        </span>
-      </h2>
-      <p style={{ fontSize: '0.95rem', color: 'var(--text-muted)', maxWidth: '500px', margin: '0 auto', lineHeight: 1.7, transition: 'color 0.3s ease' }}>
-        A decade of transformation — hover over a card to learn more
-      </p>
-    </motion.div>
+      {/* Soft blobs */}
+      <div style={{ position: 'absolute', top: '-5rem', right: '-6rem', width: '28rem', height: '28rem', borderRadius: '50%', background: 'radial-gradient(circle, rgba(30,117,255,0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: '-4rem', left: '-4rem', width: '22rem', height: '22rem', borderRadius: '50%', background: 'radial-gradient(circle, rgba(6,182,212,0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
-    {/* Carousel */}
-    <MarqueeTrack cards={historyCards} />
-  </section>
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.7 }}
+        style={{ textAlign: 'center', padding: '0 1.5rem', marginBottom: '2.5rem' }}
+      >
+        <span
+          style={{
+            display: 'inline-block',
+            fontSize: '0.68rem',
+            fontWeight: 800,
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            color: '#1E75FF',
+            background: 'rgba(30,117,255,0.08)',
+            border: '1px solid rgba(30,117,255,0.2)',
+            borderRadius: '100px',
+            padding: '0.3rem 1rem',
+            marginBottom: '1rem',
+          }}
+        >
+          Our Legacy
+        </span>
+        <h2
+          style={{
+            fontSize: 'clamp(1.75rem, 4vw, 2.8rem)',
+            fontWeight: 800,
+            color: 'var(--text-main)',
+            lineHeight: 1.2,
+            letterSpacing: '-0.02em',
+            marginBottom: '0.8rem',
+            transition: 'color 0.3s ease',
+          }}
+        >
+          The Journey of{' '}
+          <span style={{ background: 'linear-gradient(90deg,#1E75FF,#06b6d4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            Swachh Bharat
+          </span>
+        </h2>
+        <p style={{ fontSize: '0.95rem', color: 'var(--text-muted)', maxWidth: '500px', margin: '0 auto', lineHeight: 1.7, transition: 'color 0.3s ease' }}>
+          A decade of transformation — hover over a card to learn more
+        </p>
+      </motion.div>
+
+      {/* Carousel */}
+      <MarqueeTrack cards={historyCards} />
+    </section>
+  );
+};
+
+/* ─────────────────────────────────────────────
+   HOW IT WORKS — ROADMAP SECTION
+───────────────────────────────────────────── */
+const roadmapSteps = [
+  { id: 1, title: 'Open the App', desc: 'Launch CleanSight AI and log into your citizen account.', Icon: Smartphone, color: '#1E75FF', cx: 80, cy: 320 },
+  { id: 2, title: 'Fill the Form', desc: 'Enter issue details — location, description and category.', Icon: ClipboardList, color: '#06b6d4', cx: 310, cy: 70 },
+  { id: 3, title: 'Click the Photo', desc: 'Capture a high-res photo of the waste or civic issue.', Icon: Camera, color: '#8b5cf6', cx: 510, cy: 240 },
+  { id: 4, title: 'Upload It', desc: 'Tap Upload — our AI classifies the issue in seconds.', Icon: Upload, color: '#f59e0b', cx: 720, cy: 55 },
+  { id: 5, title: 'Submit', desc: 'Authorities receive an instant email with GPS coordinates.', Icon: CheckCircle, color: '#10b981', cx: 940, cy: 305 },
+];
+
+const SVG_W = 1000;
+const SVG_H = 380;
+const PATH_D = 'M 80,320 C 80,110 260,70 310,70 C 375,70 440,240 510,240 C 590,240 655,55 720,55 C 800,55 882,295 940,305';
+const PATH_LEN = 2150;
+const ANCHORS = ['above', 'below', 'above', 'below', 'above'];
+
+/* ─────────────────────────────────────────────
+   PREMIUM UI COMPONENTS
+───────────────────────────────────────────── */
+const LetterReveal = ({ text, delay = 0 }) => {
+  const letters = Array.from(text);
+  const container = {
+    hidden: { opacity: 0 },
+    visible: (i = 1) => ({
+      opacity: 1,
+      transition: { staggerChildren: 0.03, delayChildren: 0.04 * i + delay },
+    }),
+  };
+  const child = {
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { type: 'spring', damping: 12, stiffness: 200 },
+    },
+    hidden: { opacity: 0, y: 20 },
+  };
+
+  return (
+    <motion.h2
+      variants={container}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true }}
+      style={{
+        fontSize: 'clamp(1.9rem, 4.5vw, 3.2rem)',
+        fontWeight: 800,
+        color: 'var(--text-main)',
+        letterSpacing: '-0.03em',
+        lineHeight: 1.15,
+        marginBottom: '1rem',
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+      }}
+    >
+      {letters.map((letter, index) => (
+        <motion.span
+          variants={child}
+          key={index}
+          style={{ display: 'inline-block', whiteSpace: 'pre' }}
+        >
+          {letter}
+        </motion.span>
+      ))}
+    </motion.h2>
+  );
+};
+
+const PathParticles = ({ pathD, color, duration = 12 }) => {
+  return (
+    <>
+      {[0, 0.25, 0.5, 0.75].map((delay, i) => (
+        <motion.circle
+          key={i}
+          r="3"
+          fill={color}
+          initial={{ offsetDistance: '0%' }}
+          animate={{ offsetDistance: '100%' }}
+          transition={{
+            duration: duration,
+            repeat: Infinity,
+            ease: 'linear',
+            delay: delay * duration,
+          }}
+          style={{ offsetPath: `path("${pathD}")`, filter: 'blur(1px)' }}
+        />
+      ))}
+    </>
+  );
+};
+
+const RippleNode = ({ cx, cy, color, delay }) => (
+  <g>
+    {[0, 1, 2].map((i) => (
+      <motion.circle
+        key={i}
+        cx={cx}
+        cy={cy}
+        r={22}
+        fill="none"
+        stroke={color}
+        strokeWidth="1"
+        initial={{ scale: 1, opacity: 0.5 }}
+        animate={{ scale: 1.8 + i * 0.4, opacity: 0 }}
+        transition={{
+          duration: 2.5,
+          repeat: Infinity,
+          ease: 'easeOut',
+          delay: delay + i * 0.8,
+        }}
+      />
+    ))}
+  </g>
 );
+
+const HowItWorks = () => {
+  const sectionRef = useRef(null);
+  const inView = useInView(sectionRef, { once: true, margin: '-80px' });
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start end", "end start"]
+  });
+
+  const progressBarScaleY = useSpring(scrollYProgress, { stiffness: 100, damping: 30 });
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!sectionRef.current) return;
+      const rect = sectionRef.current.getBoundingClientRect();
+      setMousePos({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      });
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+
+    // Handle initial scroll if hash is present
+    if (window.location.hash === '#how-it-works') {
+      setTimeout(() => {
+        const element = document.getElementById('how-it-works');
+        if (element) {
+          const offset = 80;
+          const bodyRect = document.body.getBoundingClientRect().top;
+          const elementRect = element.getBoundingClientRect().top;
+          const elementPosition = elementRect - bodyRect;
+          const offsetPosition = elementPosition - offset;
+          window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+        }
+      }, 500);
+    }
+
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  return (
+    <section
+      id="how-it-works"
+      ref={sectionRef}
+      style={{
+        width: '100%',
+        padding: '6rem 0 7rem',
+        background: 'var(--bg-color)',
+        position: 'relative',
+        overflow: 'hidden',
+        transition: 'background-color 0.3s ease',
+        boxSizing: 'border-box',
+      }}
+    >
+      <style>{`
+        @media (max-width: 700px)  { .hiw-desktop { display: none !important; } }
+        @media (min-width: 701px)  { .hiw-mobile  { display: none !important; } }
+        .spotlight {
+          position: absolute;
+          width: 600px;
+          height: 600px;
+          background: radial-gradient(circle, rgba(30,117,255,0.08) 0%, transparent 70%);
+          border-radius: 50%;
+          pointer-events: none;
+          z-index: 0;
+          transform: translate(-50%, -50%);
+          transition: background 0.3s ease;
+        }
+      `}</style>
+
+      {/* ── Interactive Spotlight ── */}
+      <div
+        className="spotlight"
+        style={{
+          left: mousePos.x,
+          top: mousePos.y,
+        }}
+      />
+
+      {/* Background radial gradients (Base) */}
+      <div
+        style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          background:
+            'radial-gradient(ellipse 60% 50% at 10% 20%, rgba(30,117,255,0.03) 0%, transparent 60%),' +
+            'radial-gradient(ellipse 50% 40% at 90% 80%, rgba(6,182,212,0.03) 0%, transparent 60%)',
+        }}
+      />
+
+      {/* ── Header ── */}
+      <div style={{ textAlign: 'center', padding: '0 1.5rem', marginBottom: '4.5rem', position: 'relative', zIndex: 1 }}>
+        <motion.span
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={inView ? { opacity: 1, scale: 1 } : {}}
+          style={{
+            display: 'inline-block', fontSize: '0.68rem', fontWeight: 800,
+            letterSpacing: '0.18em', textTransform: 'uppercase', color: '#1E75FF',
+            background: 'rgba(30,117,255,0.08)', border: '1px solid rgba(30,117,255,0.2)',
+            borderRadius: '100px', padding: '0.3rem 1rem', marginBottom: '1.2rem',
+          }}
+        >
+          Engineering Excellence
+        </motion.span>
+
+        <LetterReveal text="The Road to a Cleaner Future" />
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={inView ? { opacity: 1 } : {}}
+          transition={{ delay: 0.8 }}
+          style={{ fontSize: '1rem', color: 'var(--text-muted)', maxWidth: '520px', margin: '0 auto', lineHeight: 1.7, transition: 'color 0.3s ease' }}
+        >
+          CleanSight AI automates every step from reporting to resolution with pinpoint precision.
+        </motion.p>
+      </div>
+
+      {/* ════ DESKTOP: SVG ROADMAP ════ */}
+      <div className="hiw-desktop" style={{ width: '100%', maxWidth: '1180px', margin: '0 auto', padding: '0 2.5rem', boxSizing: 'border-box', position: 'relative', zIndex: 1 }}>
+        <div style={{ position: 'relative', paddingBottom: `${(SVG_H / SVG_W) * 100}%` }}>
+          <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible' }}>
+            <defs>
+              <linearGradient id="hiwGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#1E75FF" />
+                <stop offset="50%" stopColor="#8b5cf6" />
+                <stop offset="100%" stopColor="#10b981" />
+              </linearGradient>
+              <filter id="hiwPathGlow">
+                <feGaussianBlur stdDeviation="5" result="blur" />
+                <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+              </filter>
+            </defs>
+
+            <path d={PATH_D} fill="none" stroke="rgba(0,0,0,0.05)" strokeWidth="16" strokeLinecap="round" />
+
+            <motion.path
+              d={PATH_D} fill="none" stroke="url(#hiwGrad)" strokeWidth="6" strokeLinecap="round"
+              strokeDasharray={PATH_LEN}
+              initial={{ strokeDashoffset: PATH_LEN }}
+              animate={inView ? { strokeDashoffset: 0 } : {}}
+              transition={{ duration: 3, ease: 'easeInOut' }}
+              filter="url(#hiwPathGlow)"
+            />
+
+            <PathParticles pathD={PATH_D} color="#fff" duration={15} />
+
+            {roadmapSteps.map((step, i) => (
+              <g key={step.id}>
+                <RippleNode cx={step.cx} cy={step.cy} color={step.color} delay={i * 0.5} />
+                <motion.circle cx={step.cx} cy={step.cy} r={24}
+                  fill={step.color}
+                  initial={{ scale: 0 }} animate={inView ? { scale: 1 } : {}}
+                  transition={{ delay: 0.5 + i * 0.4, type: 'spring' }}
+                  style={{ filter: 'drop-shadow(0 0 10px ' + step.color + '88)' }}
+                />
+                <motion.text x={step.cx} y={step.cy + 5} textAnchor="middle" fontSize="11" fontWeight="900" fill="white" style={{ userSelect: 'none' }}>
+                  {step.id}
+                </motion.text>
+                <motion.line
+                  x1={step.cx} y1={ANCHORS[i] === 'above' ? step.cy - 24 : step.cy + 24}
+                  x2={step.cx} y2={ANCHORS[i] === 'above' ? step.cy - 70 : step.cy + 70}
+                  stroke={step.color} strokeWidth="1.5" strokeDasharray="3 3"
+                  initial={{ scaleY: 0 }} animate={inView ? { scaleY: 1 } : {}}
+                  transition={{ delay: 1 + i * 0.4 }}
+                />
+              </g>
+            ))}
+          </svg>
+
+          {roadmapSteps.map((step, i) => {
+            const isAbove = ANCHORS[i] === 'above';
+            return (
+              <motion.div
+                key={step.id}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={inView ? { opacity: 1, scale: 1 } : {}}
+                whileHover={{
+                  scale: 1.05,
+                  rotateX: isAbove ? 5 : -5,
+                  rotateY: 5,
+                  boxShadow: `0 15px 45px ${step.color}33`
+                }}
+                transition={{ delay: 1.2 + i * 0.4, type: 'spring' }}
+                style={{
+                  position: 'absolute',
+                  left: `${(step.cx / SVG_W) * 100}%`,
+                  top: `${(step.cy / SVG_H) * 100}%`,
+                  transform: isAbove ? 'translate(-50%, calc(-100% - 85px))' : 'translate(-50%, 85px)',
+                  width: '160px',
+                  background: 'var(--surface)',
+                  backdropFilter: 'blur(8px)',
+                  border: `1px solid ${step.color}33`,
+                  borderRadius: '20px',
+                  padding: '1.2rem 1rem',
+                  textAlign: 'center',
+                  zIndex: 10,
+                  perspective: '1000px'
+                }}
+              >
+                <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: `${step.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.8rem' }}>
+                  <step.Icon size={18} color={step.color} strokeWidth={2.5} />
+                </div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.3rem' }}>{step.title}</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>{step.desc}</div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ══ MOBILE: PREMIUM ROADMAP ══ */}
+      <div className="hiw-mobile" style={{ padding: '0 1.5rem', maxWidth: '440px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+        {/* Central vertical track */}
+        <div style={{
+          position: 'absolute',
+          left: 'calc(2rem + 23px)',
+          top: '20px',
+          bottom: '20px',
+          width: '4px',
+          background: 'rgba(0,0,0,0.05)',
+          borderRadius: '10px'
+        }} />
+
+        {/* Animated fill track */}
+        <motion.div style={{
+          position: 'absolute',
+          left: 'calc(2rem + 23px)',
+          top: '20px',
+          width: '4px',
+          height: 'calc(100% - 40px)',
+          background: 'linear-gradient(to bottom, #1E75FF, #8b5cf6, #10b981)',
+          borderRadius: '10px',
+          scaleY: progressBarScaleY,
+          transformOrigin: 'top',
+          boxShadow: '0 0 15px rgba(30,117,255,0.4)',
+        }} />
+
+        {roadmapSteps.map((step, i) => (
+          <motion.div
+            key={step.id}
+            initial={{ opacity: 0, x: 20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ delay: 0.1, duration: 0.6, type: 'spring' }}
+            style={{ display: 'flex', gap: '2rem', marginBottom: '3rem', position: 'relative', zIndex: 2 }}
+          >
+            {/* Left: Indicator with ripple */}
+            <div style={{ flexShrink: 0, position: 'relative' }}>
+              <RippleNode cx={23} cy={23} color={step.color} delay={i * 0.3} />
+              <motion.div
+                initial={{ scale: 0 }}
+                whileInView={{ scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.2 + i * 0.1, type: 'spring' }}
+                style={{
+                  width: '46px', height: '46px', borderRadius: '50%', background: step.color,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#fff', fontSize: '0.9rem', fontWeight: 900,
+                  boxShadow: `0 8px 24px ${step.color}55`, position: 'relative', zIndex: 5
+                }}
+              >
+                {step.id}
+              </motion.div>
+            </div>
+
+            {/* Right: Glass Card */}
+            <motion.div
+              whileTap={{ scale: 0.98 }}
+              style={{
+                background: 'var(--surface)',
+                backdropFilter: 'blur(12px)',
+                border: `1px solid ${step.color}25`,
+                borderRadius: '24px',
+                padding: '1.4rem',
+                flex: 1,
+                boxShadow: `0 10px 30px rgba(0,0,0,0.05)`,
+                position: 'relative',
+                overflow: 'hidden'
+              }}
+            >
+              <div style={{
+                position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: step.color
+              }} />
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.6rem' }}>
+                <div style={{ padding: '0.4rem', borderRadius: '8px', background: `${step.color}15` }}>
+                  <step.Icon size={16} color={step.color} strokeWidth={2.5} />
+                </div>
+                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)', margin: 0, transition: 'color 0.3s ease' }}>
+                  {step.title}
+                </h4>
+              </div>
+
+              <p style={{
+                fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.6, margin: 0,
+                transition: 'color 0.3s ease'
+              }}>
+                {step.desc}
+              </p>
+            </motion.div>
+          </motion.div>
+        ))}
+      </div>
+    </section>
+  );
+};
+
+
+/* ─────────────────────────────────────────────
+   CTA SECTION — READY TO CLEAN?
+───────────────────────────────────────────── */
+/* ─────────────────────────────────────────────
+   CTA SECTION — PROFESSIONAL OVERHAUL
+───────────────────────────────────────────── */
+const CTASection = ({ onGetStarted }) => {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: "-100px" });
+
+  return (
+    <section
+      ref={ref}
+      style={{
+        width: '100%',
+        padding: '10rem 1.5rem',
+        background: 'var(--bg-color)',
+        position: 'relative',
+        overflow: 'hidden',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        transition: 'background-color 0.3s ease'
+      }}
+    >
+      {/* ── Background Patterns ── */}
+      {/* Dot Grid */}
+      <div
+        style={{
+          position: 'absolute', inset: 0, opacity: 0.15,
+          backgroundImage: 'radial-gradient(circle, var(--text-muted) 1px, transparent 1px)',
+          backgroundSize: '30px 30px',
+          pointerEvents: 'none'
+        }}
+      />
+
+      {/* Animated Floating Orbs */}
+      <motion.div
+        animate={{
+          x: [0, 50, 0], y: [0, -30, 0],
+          scale: [1, 1.2, 1]
+        }}
+        transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+        style={{
+          position: 'absolute', top: '10%', right: '15%', width: '400px', height: '400px',
+          background: 'radial-gradient(circle, rgba(30,117,255,0.08) 0%, transparent 70%)',
+          borderRadius: '50%', pointerEvents: 'none'
+        }}
+      />
+      <motion.div
+        animate={{
+          x: [0, -40, 0], y: [0, 60, 0],
+          scale: [1, 1.1, 1]
+        }}
+        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+        style={{
+          position: 'absolute', bottom: '10%', left: '10%', width: '350px', height: '350px',
+          background: 'radial-gradient(circle, rgba(16,185,129,0.06) 0%, transparent 70%)',
+          borderRadius: '50%', pointerEvents: 'none'
+        }}
+      />
+
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={inView ? { opacity: 1, y: 0 } : {}}
+        transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+        style={{
+          width: '100%',
+          maxWidth: '1000px',
+          background: 'var(--surface)',
+          backdropFilter: 'blur(24px)',
+          border: '1px solid var(--surface-border)',
+          borderRadius: '48px',
+          padding: '6rem 2rem',
+          textAlign: 'center',
+          position: 'relative',
+          zIndex: 1,
+          boxShadow: '0 40px 100px -20px rgba(0,0,0,0.12)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center'
+        }}
+      >
+        {/* Subtle internal gradient glow */}
+        <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '200px', height: '2px', background: 'linear-gradient(90deg, transparent, var(--primary), transparent)', opacity: 0.5 }} />
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={inView ? { opacity: 1, scale: 1 } : {}}
+          transition={{ delay: 0.2, duration: 0.8 }}
+        >
+          <span style={{
+            fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase',
+            letterSpacing: '0.3em', color: 'var(--primary)', marginBottom: '1.5rem', display: 'block'
+          }}>
+            Vanguard of Urban Innovation
+          </span>
+
+          <h2 style={{
+            fontSize: 'clamp(2.5rem, 6vw, 4.5rem)',
+            fontWeight: 900,
+            color: 'var(--text-main)',
+            marginBottom: '1.8rem',
+            letterSpacing: '-0.04em',
+            lineHeight: 0.95
+          }}>
+            Pioneer the Future <br />
+            <span style={{
+              background: 'linear-gradient(135deg, #1E75FF 0%, #8b5cf6 50%, #10b981 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              filter: 'drop-shadow(0 0 1px rgba(255,255,255,0.1))'
+            }}>
+              of Sustainability.
+            </span>
+          </h2>
+
+          <p style={{
+            fontSize: '1.2rem',
+            color: 'var(--text-muted)',
+            maxWidth: '620px',
+            margin: '0 auto 4rem',
+            lineHeight: 1.8,
+            fontWeight: 400
+          }}>
+            Bridge the gap between detection and action.
+            We aren't just reporting waste; <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>we are engineering a cleaner tomorrow</span>
+            , one automated alert at a time.
+          </p>
+
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <motion.button
+              onClick={onGetStarted}
+              whileHover={{
+                scale: 1.05,
+                boxShadow: '0 20px 40px rgba(30, 117, 255, 0.4)',
+                y: -5
+              }}
+              whileTap={{ scale: 0.95 }}
+              style={{
+                backgroundColor: '#1E75FF',
+                color: 'white',
+                fontSize: '1rem',
+                fontWeight: 800,
+                padding: '1.4rem 3.5rem',
+                borderRadius: '24px',
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 10px 25px -5px rgba(30, 117, 255, 0.3)',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.8rem'
+              }}
+            >
+              Get Started Now <CheckCircle size={20} />
+            </motion.button>
+
+            <motion.button
+              onClick={() => {
+                const element = document.getElementById('how-it-works');
+                if (element) {
+                  const offset = 80;
+                  const bodyRect = document.body.getBoundingClientRect().top;
+                  const elementRect = element.getBoundingClientRect().top;
+                  const elementPosition = elementRect - bodyRect;
+                  const offsetPosition = elementPosition - offset;
+                  window.scrollTo({
+                    top: offsetPosition,
+                    behavior: 'smooth'
+                  });
+                }
+              }}
+              whileHover={{
+                scale: 1.05,
+                backgroundColor: 'rgba(30, 117, 255, 0.05)',
+                y: -5
+              }}
+              whileTap={{ scale: 0.95 }}
+              style={{
+                backgroundColor: 'transparent',
+                color: 'var(--text-main)',
+                fontSize: '1rem',
+                fontWeight: 700,
+                padding: '1.4rem 3.5rem',
+                borderRadius: '24px',
+                border: '1.5px solid var(--surface-border)',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              Explore Technology
+            </motion.button>
+          </div>
+        </motion.div>
+      </motion.div>
+    </section>
+  );
+};
 
 /* ─────────────────────────────────────────────
    LANDING PAGE
@@ -382,7 +1002,7 @@ const Landing = () => {
       {/* ── DESKTOP HERO ── */}
       <div className="hidden md:flex items-center justify-start relative"
         style={{ backgroundImage: `url(${bgImage})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'scroll', height: '100vh', width: '100%', boxSizing: 'border-box', paddingLeft: '10%', paddingTop: '5rem', margin: 0 }}>
-        
+
         {/* Responsive Dark Overlay */}
         <div className="hero-overlay absolute inset-0 z-0 pointer-events-none"></div>
 
@@ -411,6 +1031,15 @@ const Landing = () => {
 
       {/* ── HISTORY SECTION ── */}
       <HistorySection />
+
+      {/* ── HOW IT WORKS SECTION ── */}
+      <HowItWorks />
+
+      {/* ── GET STARTED CTA SECTION ── */}
+      <CTASection onGetStarted={handleGetStarted} />
+
+      {/* ── FOOTER ── */}
+      <Footer />
     </div>
   );
 };

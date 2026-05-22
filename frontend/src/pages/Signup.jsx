@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Leaf, Mail, Lock, ArrowRight, ShieldCheck, User, ShieldAlert } from 'lucide-react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
+import { apiUrl } from '../config/api';
 
 const Signup = () => {
   const [name, setName] = useState('');
@@ -112,7 +113,7 @@ const Signup = () => {
         setAssignedArea('');
         setDetectingLocation(false);
       },
-      { timeout: 15000, maximumAge: 60000, enableHighAccuracy: true }
+      { timeout: 30000, maximumAge: 60000, enableHighAccuracy: true }
     );
   };
 
@@ -128,16 +129,24 @@ const Signup = () => {
     }
 
     try {
-      await axios.post('http://localhost:5000/api/auth/request-otp', 
+     await axios.post(
+        apiUrl('/api/auth/request-otp'),
         { email, password, role, name, assignedArea },
-        { timeout: 15000 } // 15s Timeout
+        { timeout: 30000 } // 30s Timeout
       );
       setStep(2);
     } catch (err) {
+      if (err?.message?.includes('API URL not configured')) {
+        setError(err.message);
+        setLoading(false);
+        return;
+      }
       if (err.code === 'ECONNABORTED') {
         setError('Server is taking too long to respond. Please check your internet or try again later.');
       } else {
-        setError(err.response?.data?.message || 'Server error. Please try again.');
+        const serverMessage = err.response?.data?.message;
+        const serverDetail = err.response?.data?.error;
+        setError(serverDetail ? `${serverMessage || 'Server error'}: ${serverDetail}` : (serverMessage || 'Server error. Please try again.'));
       }
     }
     setLoading(false);
@@ -148,7 +157,7 @@ const Signup = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/verify-otp', { email, otp });
+      const res = await axios.post(apiUrl('/api/auth/verify-otp'), { email, otp });
       
       // Store dummy password in local storage so Login can verify it seamlessly for demo purposes
       localStorage.setItem('localAuthPassword', password);
@@ -166,7 +175,12 @@ const Signup = () => {
         navigate('/report');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid OTP');
+      if (err?.message?.includes('API URL not configured')) {
+        setError(err.message);
+        setLoading(false);
+        return;
+      }
+      setError(err.response?.data?.message || err.response?.data?.error || 'Invalid OTP');
     }
     setLoading(false);
   };
